@@ -15,6 +15,8 @@
     <!-- jsPDF for Client-side PDF Generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Supabase JS client for centralized cloud storage -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
         tailwind.config = {
@@ -119,7 +121,7 @@
 
                     <!-- Owner-only bootstrap code. Never distribute the default value. -->
                     <div id="owner-setup-fields" class="hidden space-y-1 border-t border-slate-200 pt-3 mt-2">
-                        <label class="block text-xs font-semibold text-slate-700 mb-1" id="lbl-owner-setup-code">رمز المالك</label>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1" id="lbl-owner-setup-code">رمز تهيئة المالك</label>
                         <input type="password" id="owner-setup-code" autocomplete="off" class="w-full px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="أدخل رمز المالك الخاص">
                         <p class="text-[10px] text-amber-700" id="owner-setup-help">يُستخدم مرة واحدة لإنشاء حساب المدير على هذه النسخة.</p>
                     </div>
@@ -766,8 +768,23 @@
         const MONTHS_AR = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
         const MONTHS_EN = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
+        /* Supabase configuration: replace both placeholders with your project values. */
+        const SUPABASE_URL = 'https://vtsvgqxrzstfxschlnwj.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_0QjGD0LzP0MXDXxMJ3kxMQ_gAcmgdLK';
+        const SUPABASE_STATE_ID = 'main';
+        const SUPABASE_CONFIGURED =
+            SUPABASE_URL.startsWith('https://') &&
+            !SUPABASE_URL.includes('YOUR_PROJECT_ID') &&
+            SUPABASE_ANON_KEY &&
+            !SUPABASE_ANON_KEY.includes('YOUR_SUPABASE_');
+        const supabaseClient = SUPABASE_CONFIGURED && window.supabase
+            ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+            : null;
+        let cloudSyncInProgress = false;
+        let cloudSyncTimer = null;
+
         /* Change this value in the owner's private copy before sharing the file. */
-        const OWNER_SETUP_CODE = '500500';
+        const OWNER_SETUP_CODE = 'CHANGE_THIS_OWNER_CODE';
         let isStaffInvite = false;
 
         const PERMISSION_KEYS = [
@@ -812,15 +829,15 @@
         };
 
         // Initialize App Engine
-        window.onload = function() {
-            loadInitialData();
+        window.onload = async function() {
+            await loadInitialData();
             checkUrlInviteParams();
             setupInitialUI();
             checkDriveAutoSync();
         };
 
         /* Load from LocalStorage or Load Defaults */
-        function loadInitialData() {
+        async function loadInitialData() {
             const savedState = localStorage.getItem('adamn_nursery_db');
             if (savedState) {
                 try {
@@ -829,9 +846,31 @@
                     console.error("Error loading JSON dataset", e);
                     state = normalizeState(state);
                 }
+            }
+
+            if (!supabaseClient) {
+                if (!savedState) saveStateToStorage();
+                return;
+            }
+
+            const { data, error } = await supabaseClient
+                .from('nursery_state')
+                .select('state_data, updated_at')
+                .eq('id', SUPABASE_STATE_ID)
+                .maybeSingle();
+
+            if (error) {
+                console.error('Supabase load error:', error);
+                showCloudError('تعذر الاتصال بقاعدة البيانات السحابية؛ تم استخدام النسخة المحلية مؤقتاً.');
+                return;
+            }
+
+            if (data && data.state_data) {
+                state = normalizeState(data.state_data);
+                state.currentUser = null;
+                localStorage.setItem('adamn_nursery_db', JSON.stringify(state));
             } else {
-                // First initialization
-                saveStateToStorage();
+                await saveStateToSupabase();
             }
         }
 
@@ -858,6 +897,35 @@
         function saveStateToStorage() {
             localStorage.setItem('adamn_nursery_db', JSON.stringify(state));
             syncWithDriveWebhook();
+
+            if (!supabaseClient || cloudSyncInProgress) return;
+            clearTimeout(cloudSyncTimer);
+            cloudSyncTimer = setTimeout(saveStateToSupabase, 250);
+        }
+
+        async function saveStateToSupabase() {
+            if (!supabaseClient || cloudSyncInProgress) return;
+            cloudSyncInProgress = true;
+
+            // Never store the currently logged-in session marker in the cloud.
+            const cloudState = JSON.parse(JSON.stringify({ ...state, currentUser: null }));
+            const { error } = await supabaseClient
+                .from('nursery_state')
+                .upsert({
+                    id: SUPABASE_STATE_ID,
+                    state_data: cloudState,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'id' });
+
+            cloudSyncInProgress = false;
+            if (error) {
+                console.error('Supabase save error:', error);
+                showCloudError('تعذر حفظ التغييرات على السحابة؛ سيتم الاحتفاظ بها محلياً حتى تعود الخدمة.');
+            }
+        }
+
+        function showCloudError(message) {
+            if (typeof showToast === 'function') showToast(message, 'error');
         }
 
         /* Check Invitation Link URL query parameters */
