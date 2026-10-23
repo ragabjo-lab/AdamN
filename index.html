@@ -1,0 +1,2104 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdamN - نظام إدارة الحضانة الشامل</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Cairo & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- SheetJS (xlsx) for Excel Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- jsPDF for Client-side PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d',
+                        },
+                        accent: {
+                            50: '#f0f9ff',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Cairo', 'Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Cairo', 'Inter', sans-serif; }
+        .glass {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        @media print {
+            body * { visibility: hidden; }
+            #printable-area, #printable-area * { visibility: visible; }
+            #printable-area { position: absolute; left: 0; top: 0; width: 100%; }
+            .no-print { display: none !important; }
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-brand-500 selection:text-white">
+
+    <!-- Notification Toast Container -->
+    <div id="toast-container" class="fixed top-5 left-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="app" class="min-h-screen flex flex-col">
+
+        <!-- AUTH SCREEN (LOGIN / INITIAL SIGNUP) -->
+        <div id="auth-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-brand-900 to-slate-900 p-4">
+            <div class="glass max-w-md w-full rounded-3xl p-8 shadow-2xl relative overflow-hidden border border-white/20">
+                <div class="text-center mb-8">
+                    <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-tr from-brand-600 to-accent-500 text-white shadow-lg mb-4 text-3xl font-extrabold tracking-wider">
+                        AdamN
+                    </div>
+                    <h1 class="text-2xl font-bold text-slate-900" id="auth-title">نظام إدارة الحضانة الذكي</h1>
+                    <p class="text-xs text-slate-500 mt-1" id="auth-subtitle">سجل الدخول للمتابعة إلى لوحة التحكم</p>
+                </div>
+
+                <!-- Admin Link Alert Banner (When logged in using Invitation link) -->
+                <div id="invite-alert" class="hidden mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-700 flex items-center gap-2">
+                    <i class="fa-solid fa-info-circle text-base"></i>
+                    <span id="invite-alert-text">أنت تسجل الدخول باستخدام رابط دعوة الموظفين.</span>
+                </div>
+
+                <!-- First User (Admin) Banner -->
+                <div id="first-user-banner" class="hidden mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-center gap-2">
+                    <i class="fa-solid fa-crown text-amber-600 text-base"></i>
+                    <span>أول مستخدم يتم إنشاؤه سيكون هو <strong>المدير المسؤول</strong> للنظام.</span>
+                </div>
+
+                <form id="auth-form" class="space-y-4" onsubmit="handleAuthSubmit(event)">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1" id="lbl-username">اسم المستخدم (Username)</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">
+                                <i class="fa-solid fa-user"></i>
+                            </span>
+                            <input type="text" id="auth-username" required class="w-full pr-10 pl-4 py-2.5 bg-white/80 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" placeholder="أدخل اسم المستخدم">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1" id="lbl-password">كلمة المرور (Password)</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">
+                                <i class="fa-solid fa-lock"></i>
+                            </span>
+                            <input type="password" id="auth-password" required class="w-full pr-10 pl-4 py-2.5 bg-white/80 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" placeholder="••••••••">
+                        </div>
+                    </div>
+
+                    <!-- Owner-only bootstrap code. Never distribute the default value. -->
+                    <div id="owner-setup-fields" class="hidden space-y-1 border-t border-slate-200 pt-3 mt-2">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1" id="lbl-owner-setup-code">رمز تهيئة المالك</label>
+                        <input type="password" id="owner-setup-code" autocomplete="off" class="w-full px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="أدخل رمز المالك الخاص">
+                        <p class="text-[10px] text-amber-700" id="owner-setup-help">يُستخدم مرة واحدة لإنشاء حساب المدير على هذه النسخة.</p>
+                    </div>
+
+                    <!-- Force New Password Fields (Triggered on first login with Temp Password) -->
+                    <div id="force-new-password-fields" class="hidden space-y-4 border-t border-slate-200 pt-3 mt-2">
+                        <div class="p-2.5 bg-yellow-50 text-amber-800 rounded-xl text-xs">
+                            <i class="fa-solid fa-key me-1"></i> يجب عليك تغيير كلمة المرور المؤقتة عند أول تسجيل دخول.
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">كلمة المرور الجديدة</label>
+                            <input type="password" id="auth-new-password" class="w-full px-4 py-2.5 bg-white/80 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" placeholder="كلمة المرور الجديدة">
+                        </div>
+                    </div>
+
+                    <button type="submit" id="auth-btn" class="w-full py-3 px-4 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl shadow-md transition duration-200 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-right-to-bracket"></i>
+                        <span id="auth-btn-text">تسجيل الدخول</span>
+                    </button>
+                </form>
+
+                <div class="mt-6 text-center text-xs text-slate-500 flex justify-between items-center">
+                    <button type="button" onclick="toggleLanguage()" class="text-brand-700 font-semibold hover:underline flex items-center gap-1">
+                        <i class="fa-solid fa-globe"></i> <span id="lang-toggle-auth-text">English</span>
+                    </button>
+                    <span>AdamN v2.5 &copy; 2026</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN DASHBOARD APP LAYOUT -->
+        <div id="dashboard-screen" class="hidden flex-1 flex flex-col bg-slate-100 min-h-screen">
+
+            <!-- NAVBAR / HEADER -->
+            <header class="bg-slate-900 text-white sticky top-0 z-30 shadow-md">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex items-center justify-between h-16">
+                        
+                        <!-- Logo & Brand -->
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-500 to-accent-500 flex items-center justify-center text-white font-black text-xl shadow-md">
+                                AN
+                            </div>
+                            <div>
+                                <h1 class="font-bold text-lg leading-none">AdamN</h1>
+                                <p class="text-[10px] text-slate-400" id="nav-tagline">نظام إدارة الحضانة</p>
+                            </div>
+                        </div>
+
+                        <!-- Top Quick Actions & User Bar -->
+                        <div class="flex items-center gap-3">
+                            <!-- Drive Sync Button (Admin Only) -->
+                            <button id="btn-drive-sync" onclick="openDriveSyncModal()" class="hidden px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs font-medium text-slate-200 flex items-center gap-2 transition">
+                                <i class="fa-brands fa-google-drive text-emerald-400"></i>
+                                <span class="hidden sm:inline" id="txt-drive-sync">ربط / مزامنة ملف</span>
+                                <span id="drive-sync-badge" class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            </button>
+
+                            <!-- Copy Staff Invitation Link Button (Admin Only) -->
+                            <button id="btn-copy-invite" onclick="copyUserInviteLink()" class="hidden px-3 py-1.5 bg-brand-800 hover:bg-brand-700 text-brand-100 border border-brand-700 rounded-lg text-xs font-medium flex items-center gap-2 transition">
+                                <i class="fa-solid fa-link"></i>
+                                <span class="hidden md:inline" id="txt-copy-link">نسخ رابط المستخدمين</span>
+                            </button>
+
+                            <!-- Language Switcher -->
+                            <button onclick="toggleLanguage()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium flex items-center gap-1.5 transition">
+                                <i class="fa-solid fa-globe"></i>
+                                <span id="current-lang-code">EN</span>
+                            </button>
+
+                            <!-- Birthday Notification Bell Icon -->
+                            <div class="relative">
+                                <button id="btn-birthday-bell" onclick="toggleBirthdayModal()" class="p-2 text-slate-400 hover:text-amber-400 relative transition">
+                                    <i class="fa-solid fa-cake-candles text-lg"></i>
+                                    <span id="birthday-count-badge" class="hidden absolute -top-1 -right-1 bg-amber-500 text-slate-900 text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">0</span>
+                                </button>
+                            </div>
+
+                            <!-- User Profile Info & Logout -->
+                            <div class="flex items-center border-s border-slate-800 ps-3 ms-1 gap-2">
+                                <div class="text-end hidden sm:block">
+                                    <div id="nav-user-name" class="text-xs font-bold text-slate-200">المدير</div>
+                                    <div id="nav-user-role" class="text-[10px] text-emerald-400 font-semibold">مدير النظام</div>
+                                </div>
+                                <button onclick="handleLogout()" class="p-2 text-slate-400 hover:text-red-400 rounded-lg transition" title="تسجيل الخروج">
+                                    <i class="fa-solid fa-right-from-bracket text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- NAVIGATION TABS -->
+                <div class="bg-slate-800/90 border-t border-slate-700/50">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <nav class="flex space-x-1 sm:space-x-4 space-x-reverse overflow-x-auto py-2 scrollbar-none" id="app-nav-tabs">
+                            <!-- Student Tab -->
+                            <button data-tab="students" onclick="switchTab('students')" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition flex items-center gap-2 bg-brand-600 text-white">
+                                <i class="fa-solid fa-children"></i> <span id="tab-txt-students">بيانات الطلاب</span>
+                            </button>
+                            <!-- Payments Tab -->
+                            <button data-tab="payments" id="tab-btn-payments" onclick="switchTab('payments')" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition flex items-center gap-2 text-slate-300 hover:bg-slate-700/50">
+                                <i class="fa-solid fa-file-invoice-dollar"></i> <span id="tab-txt-payments">المدفوعات</span>
+                            </button>
+                            <!-- Employees Tab -->
+                            <button data-tab="employees" id="tab-btn-employees" onclick="switchTab('employees')" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition flex items-center gap-2 text-slate-300 hover:bg-slate-700/50">
+                                <i class="fa-solid fa-id-card"></i> <span id="tab-txt-employees">الموظفين</span>
+                            </button>
+                            <!-- Expenses Tab -->
+                            <button data-tab="expenses" id="tab-btn-expenses" onclick="switchTab('expenses')" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition flex items-center gap-2 text-slate-300 hover:bg-slate-700/50">
+                                <i class="fa-solid fa-wallet"></i> <span id="tab-txt-expenses">المصروفات</span>
+                            </button>
+                            <!-- Finance Tab -->
+                            <button data-tab="finance" id="tab-btn-finance" onclick="switchTab('finance')" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition flex items-center gap-2 text-slate-300 hover:bg-slate-700/50">
+                                <i class="fa-solid fa-chart-pie"></i> <span id="tab-txt-finance">المالية</span>
+                            </button>
+                            <!-- Settings Tab (Admin) -->
+                            <button data-tab="settings" id="tab-btn-settings" onclick="switchTab('settings')" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition flex items-center gap-2 text-slate-300 hover:bg-slate-700/50">
+                                <i class="fa-solid fa-gears"></i> <span id="tab-txt-settings">الضبط والمستخدمين</span>
+                            </button>
+                        </nav>
+                    </div>
+                </div>
+            </header>
+
+            <!-- TAB CONTENT PANELS CONTAINER -->
+            <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+                <!-- Birthday Alert Top Banner -->
+                <div id="top-birthday-alert" class="hidden bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl p-4 shadow-lg flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-2xl">
+                            🎂
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-sm" id="birthday-alert-title">تنبيه أعياد الميلاد الغد!</h4>
+                            <p class="text-xs text-amber-100" id="birthday-alert-body">هناك أطفال لديهم أعياد ميلاد غداً، يرجى التجهيز للاحتفال.</p>
+                        </div>
+                    </div>
+                    <button onclick="toggleBirthdayModal()" class="px-3 py-1.5 bg-white text-amber-800 rounded-xl text-xs font-bold shadow hover:bg-amber-50">
+                        عرض القائمة
+                    </button>
+                </div>
+
+                <!-- TAB 1: STUDENTS INFORMATION -->
+                <section id="panel-students" class="tab-panel space-y-6">
+                    
+                    <!-- Form Header & Actions Card -->
+                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100">
+                            <div>
+                                <h2 class="text-xl font-extrabold text-slate-800" id="txt-student-form-title">تسجيل / تعديل طالب</h2>
+                                <p class="text-xs text-slate-500" id="txt-student-form-desc">أدخل بيانات الطفل وملحقات التسجيل الخاصة به</p>
+                            </div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <button id="btn-export-excel-students" onclick="exportDataToExcel()" class="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold flex items-center gap-2 transition">
+                                    <i class="fa-solid fa-file-excel"></i> <span id="txt-btn-excel">تصدير Excel</span>
+                                </button>
+                                <button id="btn-print-all-students" onclick="openPrintModal('all')" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-2 transition">
+                                    <i class="fa-solid fa-print"></i> <span id="txt-btn-print-all">طباعة الكل</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- STUDENT FORM -->
+                        <form id="student-form" onsubmit="handleStudentSave(event)" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                            
+                            <!-- Left Frame: Photo Upload (as requested) -->
+                            <div class="lg:col-span-3 flex flex-col items-center justify-center p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl">
+                                <div class="relative w-32 h-32 rounded-2xl overflow-hidden bg-slate-200 border-2 border-white shadow-md mb-3 group">
+                                    <img id="student-photo-preview" src="https://placehold.co/150x150/e2e8f0/64748b?text=صورة+الطفل" class="w-full h-full object-cover">
+                                    <label for="student-photo-input" class="absolute inset-0 bg-slate-900/40 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition">
+                                        <i class="fa-solid fa-camera text-xl mb-1"></i>
+                                        <span class="text-[10px]" id="txt-change-photo">تغيير الصورة</span>
+                                    </label>
+                                </div>
+                                <input type="file" id="student-photo-input" accept="image/*" class="hidden" onchange="previewStudentPhoto(this)">
+                                <button type="button" onclick="document.getElementById('student-photo-input').click()" id="btn-upload-photo" class="px-3 py-1.5 bg-white border border-slate-300 text-slate-700 rounded-xl text-xs font-semibold shadow-sm hover:bg-slate-50">
+                                    <i class="fa-solid fa-upload me-1"></i> <span id="txt-upload-photo-btn">تحميل صورة</span>
+                                </button>
+                            </div>
+
+                            <!-- Right Side Inputs -->
+                            <div class="lg:col-span-9 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <input type="hidden" id="student-id">
+
+                                <!-- Full Name -->
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1" id="lbl-student-name">اسم الطالب بالكامل *</label>
+                                    <input type="text" id="student-name" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-brand-500 outline-none">
+                                </div>
+
+                                <!-- Parent Phone Number (Strict digits) -->
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1" id="lbl-student-phone">رقم هاتف ولي الأمر (أرقام فقط) *</label>
+                                    <input type="text" id="student-phone" pattern="[0-9]+" required oninput="this.value = this.value.replace(/[^0-9]/g, '')" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-brand-500 outline-none" placeholder="01xxxxxxxxx">
+                                </div>
+
+                                <!-- Date of Birth -->
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1" id="lbl-student-dob">تاريخ الميلاد *</label>
+                                    <input type="date" id="student-dob" required onchange="calculateChildAgeDetails()" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-brand-500 outline-none">
+                                    <!-- Dynamic Age & Birthday Calculation Info Box -->
+                                    <div id="dob-calc-info" class="mt-2 p-2 bg-slate-100 rounded-xl text-[11px] text-slate-600 space-y-0.5 hidden">
+                                        <div><i class="fa-solid fa-cake-candles text-brand-600 me-1"></i> <span id="calc-age-txt">العمر: -</span></div>
+                                        <div><i class="fa-solid fa-hourglass-half text-amber-600 me-1"></i> <span id="calc-bday-txt">متبقي لعيد الميلاد: -</span></div>
+                                    </div>
+                                </div>
+
+                                <!-- Registration Date -->
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1" id="lbl-student-regdate">تاريخ التقديم *</label>
+                                    <input type="date" id="student-regdate" required onchange="calculateEnrollmentDuration()" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-brand-500 outline-none">
+                                    <div id="reg-duration-txt" class="mt-1 text-[11px] text-slate-500 font-medium"></div>
+                                </div>
+
+                                <!-- Attachments Upload -->
+                                <div class="sm:col-span-2">
+                                    <label class="block text-xs font-bold text-slate-700 mb-1" id="lbl-attachments">إرفاق المستندات (شهادة ميلاد / أوراق)</label>
+                                    <div class="flex items-center gap-3">
+                                        <input type="file" id="student-files-input" multiple class="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100 cursor-pointer">
+                                        <span id="attached-files-count" class="text-xs text-slate-500 font-medium"></span>
+                                    </div>
+                                    <div id="attachments-preview-list" class="mt-2 flex flex-wrap gap-2"></div>
+                                </div>
+
+                                <!-- Form Action Buttons -->
+                                <div class="sm:col-span-2 flex items-center justify-end gap-3 pt-2">
+                                    <button type="button" onclick="resetStudentForm()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl transition">
+                                        إلغاء / تفريغ
+                                    </button>
+                                    <button type="submit" id="btn-save-student" class="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center gap-2">
+                                        <i class="fa-solid fa-floppy-disk"></i> <span id="txt-save-student-btn">حفظ بيانات الطالب</span>
+                                    </button>
+                                </div>
+
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Students Directory List & Search -->
+                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80">
+                        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+                            <h3 class="text-lg font-bold text-slate-800" id="txt-students-list-title">قائمة الطلاب المسجلين</h3>
+                            
+                            <!-- Search Bar -->
+                            <div class="relative w-full sm:w-72">
+                                <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">
+                                    <i class="fa-solid fa-search"></i>
+                                </span>
+                                <input type="text" id="search-student-input" onkeyup="renderStudentsList()" class="w-full pr-10 pl-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-brand-500 outline-none" placeholder="بحث باسم الطالب أو الهاتف...">
+                            </div>
+                        </div>
+
+                        <!-- Table -->
+                        <div class="overflow-x-auto rounded-2xl border border-slate-100">
+                            <table class="w-full text-end text-xs text-slate-600">
+                                <thead class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+                                    <tr>
+                                        <th class="p-3 text-center">#</th>
+                                        <th class="p-3">الصورة</th>
+                                        <th class="p-3">اسم الطالب</th>
+                                        <th class="p-3">تاريخ الميلاد / العمر</th>
+                                        <th class="p-3">هاتف ولي الأمر</th>
+                                        <th class="p-3">مدة التسجيل</th>
+                                        <th class="p-3">تم التسجيل بواسطة</th>
+                                        <th class="p-3 text-center">الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="students-table-body" class="divide-y divide-slate-100">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </section>
+
+                <!-- TAB 2: PAYMENTS SYSTEM -->
+                <section id="panel-payments" class="tab-panel hidden space-y-6">
+                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                            <div>
+                                <h2 class="text-xl font-extrabold text-slate-800" id="txt-payments-title">نظام سجل مدفوعات الطلاب</h2>
+                                <p class="text-xs text-slate-500" id="txt-payments-subtitle">تتبع ومتابعة المصاريف الأكاديمية للأشهر والسنوات</p>
+                            </div>
+                            <!-- Controls: Year Selector & Student Selector -->
+                            <div class="flex items-center gap-3 flex-wrap">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 mb-1">السنة المالية</label>
+                                    <select id="payment-year-select" onchange="renderPaymentsTable()" class="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-500">
+                                        <option value="2025">2025</option>
+                                        <option value="2026" selected>2026</option>
+                                        <option value="2027">2027</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-500 mb-1">تصفية حسب الطفل</label>
+                                    <select id="payment-student-filter" onchange="renderPaymentsTable()" class="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-500 max-w-xs">
+                                        <option value="ALL">جميع الطلاب</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Payments Grid / Directory -->
+                        <div id="payments-cards-container" class="space-y-6">
+                            <!-- Dynamic Cards per student -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 3: EMPLOYEES & HR -->
+                <section id="panel-employees" class="tab-panel hidden space-y-6">
+                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                            <div>
+                                <h2 class="text-xl font-extrabold text-slate-800" id="txt-emp-title">سجل الموظفين والرواتب</h2>
+                                <p class="text-xs text-slate-500">إدارة كادر المعلمات والعاملين والمستحقات</p>
+                            </div>
+                            <button id="btn-add-employee-modal" onclick="openEmployeeModal()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 transition shadow-sm">
+                                <i class="fa-solid fa-user-plus"></i> <span id="txt-add-emp-btn">إضافة موظف جديد</span>
+                            </button>
+                        </div>
+
+                        <!-- Employee List Table -->
+                        <div class="overflow-x-auto rounded-2xl border border-slate-100">
+                            <table class="w-full text-end text-xs text-slate-600">
+                                <thead class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+                                    <tr>
+                                        <th class="p-3">اسم الموظف</th>
+                                        <th class="p-3">الوظيفة</th>
+                                        <th class="p-3">الهاتف</th>
+                                        <th class="p-3">الراتب الأساسي</th>
+                                        <th class="p-3">المكافآت</th>
+                                        <th class="p-3">الخصومات</th>
+                                        <th class="p-3">صافي الراتب</th>
+                                        <th class="p-3 text-center">الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="employees-table-body" class="divide-y divide-slate-100">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 4: EXPENSES -->
+                <section id="panel-expenses" class="tab-panel hidden space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Add Expense Form -->
+                        <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80">
+                            <h3 class="text-lg font-extrabold text-slate-800 mb-4" id="txt-add-expense-title">تسجيل مصروف جديد</h3>
+                            <form id="expense-form" onsubmit="handleExpenseSave(event)" class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">بند المصروف *</label>
+                                    <input type="text" id="expense-title" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 outline-none" placeholder="مثال: أدوات كتابية، صيانة، كهرباء...">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">المبلغ *</label>
+                                    <input type="number" step="0.01" id="expense-amount" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 outline-none" placeholder="0.00">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">التاريخ *</label>
+                                    <input type="date" id="expense-date" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">ملاحظات / بيان</label>
+                                    <textarea id="expense-notes" rows="2" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 outline-none"></textarea>
+                                </div>
+                                <button type="submit" id="btn-save-expense" class="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-xl shadow transition">
+                                    حفظ المصروف
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Expense Table History -->
+                        <div class="lg:col-span-2 bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80">
+                            <h3 class="text-lg font-extrabold text-slate-800 mb-4" id="txt-expenses-history-title">سجل المصروفات</h3>
+                            <div class="overflow-x-auto rounded-2xl border border-slate-100">
+                                <table class="w-full text-end text-xs text-slate-600">
+                                    <thead class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+                                        <tr>
+                                            <th class="p-3">التاريخ</th>
+                                            <th class="p-3">البند</th>
+                                            <th class="p-3">المبلغ</th>
+                                            <th class="p-3">ملاحظات</th>
+                                            <th class="p-3 text-center">حذف</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="expenses-table-body" class="divide-y divide-slate-100">
+                                        <!-- Dynamic rows -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 5: FINANCE OVERVIEW -->
+                <section id="panel-finance" class="tab-panel hidden space-y-6">
+                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80 space-y-6">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-xl font-extrabold text-slate-800" id="txt-finance-title">الملخص والتقرير المالي</h2>
+                            <span class="px-3 py-1 bg-brand-50 text-brand-700 rounded-full text-xs font-bold" id="finance-year-badge">2026</span>
+                        </div>
+
+                        <!-- KPI Summary Cards -->
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div class="p-5 bg-emerald-50 border border-emerald-100 rounded-2xl">
+                                <div class="text-xs font-bold text-emerald-600 mb-1" id="txt-total-income">إجمالي الإيرادات (الاشتراكات)</div>
+                                <div id="stat-total-income" class="text-2xl font-extrabold text-emerald-800">0.00</div>
+                            </div>
+                            <div class="p-5 bg-rose-50 border border-rose-100 rounded-2xl">
+                                <div class="text-xs font-bold text-rose-600 mb-1" id="txt-total-exp">إجمالي المصروفات والرواتب</div>
+                                <div id="stat-total-expenses" class="text-2xl font-extrabold text-rose-800">0.00</div>
+                            </div>
+                            <div class="p-5 bg-sky-50 border border-sky-100 rounded-2xl">
+                                <div class="text-xs font-bold text-sky-600 mb-1" id="txt-net-profit">صافي الأرباح / العجز</div>
+                                <div id="stat-net-profit" class="text-2xl font-extrabold text-sky-800">0.00</div>
+                            </div>
+                        </div>
+
+                        <!-- Visual Breakdown -->
+                        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                            <h4 class="font-bold text-xs text-slate-700 mb-3" id="txt-financial-summary-heading">تفاصيل الحسابات المالية للسنة الحالية</h4>
+                            <div class="space-y-3">
+                                <div>
+                                    <div class="flex justify-between text-xs font-bold mb-1">
+                                        <span>نسبة تحصيل اشتراكات الطلاب</span>
+                                        <span id="income-percentage-txt">0%</span>
+                                    </div>
+                                    <div class="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
+                                        <div id="income-progress-bar" class="bg-emerald-500 h-full w-0 transition-all"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 6: SETTINGS & PERMISSIONS (Admin Only) -->
+                <section id="panel-settings" class="tab-panel hidden space-y-6">
+                    <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80 space-y-6">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                            <div>
+                                <h2 class="text-xl font-extrabold text-slate-800" id="txt-admin-settings-title">لوحة تحكم المدير والصلاحيات</h2>
+                                <p class="text-xs text-slate-500">إدارة حسابات المستخدمين وصلاحيات الوصول بالتفصيل</p>
+                            </div>
+                            <button onclick="openCreateUserModal()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow transition">
+                                <i class="fa-solid fa-user-plus"></i> <span id="txt-create-user-btn">إضافة مستخدم جديد</span>
+                            </button>
+                        </div>
+
+                        <!-- System Users List & Permissions Grid -->
+                        <div class="space-y-4">
+                            <h3 class="font-bold text-sm text-slate-800" id="txt-users-list-heading">قائمة مستخدمي النظام</h3>
+                            
+                            <div class="overflow-x-auto rounded-2xl border border-slate-100">
+                                <table class="w-full text-end text-xs text-slate-600">
+                                    <thead class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+                                        <tr>
+                                            <th class="p-3">اسم المستخدم</th>
+                                            <th class="p-3">الدور / الرتبة</th>
+                                            <th class="p-3">الحالة</th>
+                                            <th class="p-3">سماح للتعديل بعد التسجيل</th>
+                                            <th class="p-3 text-center">إدارة الصلاحيات والإجراءات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="users-table-body" class="divide-y divide-slate-100">
+                                        <!-- Dynamic User Rows -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Backup & Drive Sync Settings Container -->
+                        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                            <h4 class="font-bold text-xs text-slate-700" id="txt-data-management">إدارة البيانات والنسخ الاحتياطي</h4>
+                            <div class="flex items-center gap-3 flex-wrap">
+                                <button onclick="downloadBackupJSON()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center gap-2">
+                                    <i class="fa-solid fa-download"></i> تصدير النسخة الاحتياطية (JSON)
+                                </button>
+                                <label class="px-3.5 py-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold cursor-pointer flex items-center gap-2">
+                                    <i class="fa-solid fa-upload"></i> استرجاع نسخة بيانات
+                                    <input type="file" id="import-json-file" accept=".json" class="hidden" onchange="importBackupJSON(event)">
+                                </label>
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- MODAL: GOOGLE DRIVE / LOCAL FILE LINK (Admin Only) -->
+    <div id="modal-drive-sync" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-base text-slate-800 flex items-center gap-2">
+                    <i class="fa-brands fa-google-drive text-emerald-600"></i> ربط ملف Google Drive / تخزين محلي
+                </h3>
+                <button onclick="closeDriveSyncModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">
+                يقوم البرنامج بحفظ وحفظ التحديثات تلقائياً. يمكنك ربط رابط ملف التخزين السحابي (Google Drive Webhook / JSON URL) للتزامن التلقائي عند كل فتح للبرنامج.
+            </p>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">رابط الملف / Webhook URL</label>
+                <input type="url" id="drive-file-url" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="https://script.google.com/macros/s/.../exec">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeDriveSyncModal()" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold">إلغاء</button>
+                <button onclick="saveDriveSyncConfig()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold">حفظ وإجراء المزامنة الأن</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: BIRTHDAYS NEARBY NOTIFICATION -->
+    <div id="modal-birthdays" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-base text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-cake-candles text-amber-500"></i> أعياد الميلاد القادمة غداً
+                </h3>
+                <button onclick="toggleBirthdayModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div id="birthday-modal-list" class="space-y-2 max-h-60 overflow-y-auto">
+                <!-- Dynamic list -->
+            </div>
+            <div class="text-end pt-2">
+                <button onclick="toggleBirthdayModal()" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CREATE / EDIT USER & PERMISSIONS -->
+    <div id="modal-user-edit" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-4 my-8">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-base text-slate-800" id="txt-modal-user-title">إدارة المستخدم والصلاحيات</h3>
+                <button onclick="closeUserModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <form id="user-edit-form" onsubmit="handleUserSave(event)" class="space-y-4">
+                <input type="hidden" id="edit-user-id">
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">اسم المستخدم (Username) *</label>
+                        <input type="text" id="edit-username" required class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">كلمة المرور المؤقتة / الجديدة</label>
+                        <input type="password" id="edit-user-pass" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 outline-none" placeholder="اتركه فارغاً للحفاظ على القديمة">
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="font-bold text-xs text-slate-800 border-b border-slate-100 pb-2 mb-3">شبكة جدول الصلاحيات التفصيلية (Allow / Deny)</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto p-2 bg-slate-50 rounded-2xl border border-slate-200 text-xs" id="permissions-grid">
+                        <!-- Dynamic checkboxes generated via JavaScript -->
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                    <button type="button" onclick="closeUserModal()" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold">إلغاء</button>
+                    <button type="submit" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold shadow">حفظ البيانات</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: CREATE / EDIT EMPLOYEE -->
+    <div id="modal-employee-edit" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-base text-slate-800" id="txt-emp-modal-title">بيانات الموظف</h3>
+                <button onclick="closeEmployeeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="employee-form" onsubmit="handleEmployeeSave(event)" class="space-y-3 text-xs">
+                <input type="hidden" id="emp-id">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">الاسم بالكامل *</label>
+                    <input type="text" id="emp-name" required class="w-full px-3 py-2 bg-slate-50 border rounded-xl outline-none">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">المسمى الوظيفي *</label>
+                    <input type="text" id="emp-role" required class="w-full px-3 py-2 bg-slate-50 border rounded-xl outline-none" placeholder="معلمة / إدارية / عاملة">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">رقم الهاتف</label>
+                    <input type="text" id="emp-phone" class="w-full px-3 py-2 bg-slate-50 border rounded-xl outline-none">
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">الراتب الأساسي</label>
+                        <input type="number" id="emp-salary" value="0" class="w-full px-2 py-2 bg-slate-50 border rounded-xl outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">المكافآت</label>
+                        <input type="number" id="emp-bonuses" value="0" class="w-full px-2 py-2 bg-slate-50 border rounded-xl outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">الخصومات</label>
+                        <input type="number" id="emp-deductions" value="0" class="w-full px-2 py-2 bg-slate-50 border rounded-xl outline-none">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-3">
+                    <button type="button" onclick="closeEmployeeModal()" class="px-4 py-2 bg-slate-100 rounded-xl font-bold">إلغاء</button>
+                    <button type="submit" class="px-4 py-2 bg-brand-600 text-white rounded-xl font-bold shadow">حفظ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- PRINT & REPORT PREVIEW MODAL CONTAINER (PRINTABLE AREA) -->
+    <div id="modal-print-preview" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden flex flex-col items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-4xl w-full h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="p-4 bg-slate-900 text-white flex justify-between items-center no-print">
+                <h3 class="font-bold text-sm" id="txt-print-preview-title">معاينة التقرير والطباعة</h3>
+                <div class="flex items-center gap-2">
+                    <button onclick="window.print()" class="px-4 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5">
+                        <i class="fa-solid fa-print"></i> طباعة / حفظ كـ PDF
+                    </button>
+                    <button onclick="closePrintModal()" class="p-1.5 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+            </div>
+            <div class="flex-1 p-8 overflow-y-auto bg-white" id="printable-area">
+                <!-- Dynamic Content injected here for single student or all students report -->
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC ENGINE -->
+    <script>
+        /* ==========================================================================
+           GLOBAL CONSTANTS & TRANSLATIONS DICTIONARY
+           ========================================================================== */
+        const MONTHS_AR = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+        const MONTHS_EN = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+        /* Change this value in the owner's private copy before sharing the file. */
+        const OWNER_SETUP_CODE = 'CHANGE_THIS_OWNER_CODE';
+        let isStaffInvite = false;
+
+        const PERMISSION_KEYS = [
+            { key: 'addStudent', ar: 'إضافة طالب', en: 'Add Student' },
+            { key: 'viewStudents', ar: 'مشاهدة الطلاب', en: 'View Students' },
+            { key: 'editStudent', ar: 'تعديل طالب', en: 'Edit Student' },
+            { key: 'deleteStudent', ar: 'حذف طالب', en: 'Delete Student' },
+            { key: 'search', ar: 'البحث', en: 'Search' },
+            { key: 'uploadPhoto', ar: 'رفع صورة', en: 'Upload Photo' },
+            { key: 'uploadAttachments', ar: 'رفع مرفقات', en: 'Upload Attachments' },
+            { key: 'viewAttachments', ar: 'مشاهدة المرفقات', en: 'View Attachments' },
+            { key: 'changeAttachments', ar: 'تغيير المرفقات', en: 'Change Attachments' },
+            { key: 'printSingleStudent', ar: 'طباعة بيانات طالب', en: 'Print Single Student' },
+            { key: 'printAllStudents', ar: 'طباعة جميع الطلاب', en: 'Print All Students' },
+            { key: 'exportExcel', ar: 'تصدير Excel', en: 'Export Excel' },
+            { key: 'exportPdf', ar: 'تصدير PDF', en: 'Export PDF' },
+            { key: 'viewPayments', ar: 'مشاهدة بيانات الدفع', en: 'View Payments' },
+            { key: 'editPayments', ar: 'تعديل بيانات الدفع', en: 'Edit Payments' },
+            { key: 'viewEmployees', ar: 'مشاهدة الموظفين', en: 'View Employees' },
+            { key: 'addEmployee', ar: 'إضافة موظف', en: 'Add Employee' },
+            { key: 'editEmployee', ar: 'تعديل موظف', en: 'Edit Employee' },
+            { key: 'deleteEmployee', ar: 'حذف موظف', en: 'Delete Employee' },
+            { key: 'viewExpenses', ar: 'مشاهدة المصروفات', en: 'View Expenses' },
+            { key: 'addExpense', ar: 'إضافة مصروف', en: 'Add Expense' },
+            { key: 'viewFinancialPage', ar: 'مشاهدة الصفحة المالية', en: 'View Financial Page' },
+            { key: 'manageUsers', ar: 'إدارة المستخدمين', en: 'Manage Users' },
+            { key: 'allowEditAfterRelogin', ar: 'السماح بالتعديل بعد إعادة تسجيل الدخول', en: 'Allow Edit After Re-login' }
+        ];
+
+        /* ==========================================================================
+           APP INITIAL STATE & LOCAL STORAGE DATABASE STRUCT
+           ========================================================================== */
+        let state = {
+            lang: 'ar',
+            currentUser: null,
+            driveSyncUrl: '',
+            users: [],
+            students: [],
+            payments: {}, // Format: { "studentId_year_monthIndex": { amount, status, date, recordedBy, notes } }
+            employees: [],
+            expenses: []
+        };
+
+        // Initialize App Engine
+        window.onload = function() {
+            loadInitialData();
+            checkUrlInviteParams();
+            setupInitialUI();
+            checkDriveAutoSync();
+        };
+
+        /* Load from LocalStorage or Load Defaults */
+        function loadInitialData() {
+            const savedState = localStorage.getItem('adamn_nursery_db');
+            if (savedState) {
+                try {
+                    state = normalizeState(JSON.parse(savedState));
+                } catch(e) {
+                    console.error("Error loading JSON dataset", e);
+                    state = normalizeState(state);
+                }
+            } else {
+                // First initialization
+                saveStateToStorage();
+            }
+        }
+
+        // Keep data from older versions/imported backups compatible with the app.
+        function normalizeState(value) {
+            const source = value && typeof value === 'object' ? value : {};
+            const normalized = {
+                ...state,
+                ...source,
+                users: Array.isArray(source.users) ? source.users : [],
+                students: Array.isArray(source.students) ? source.students : [],
+                payments: source.payments && typeof source.payments === 'object' && !Array.isArray(source.payments) ? source.payments : {},
+                employees: Array.isArray(source.employees) ? source.employees : [],
+                expenses: Array.isArray(source.expenses) ? source.expenses : [],
+                lang: source.lang === 'en' ? 'en' : 'ar'
+            };
+            const activeUsername = normalized.currentUser && normalized.currentUser.username;
+            normalized.currentUser = activeUsername
+                ? (normalized.users.find(u => u.username === activeUsername) || null)
+                : null;
+            return normalized;
+        }
+
+        function saveStateToStorage() {
+            localStorage.setItem('adamn_nursery_db', JSON.stringify(state));
+            syncWithDriveWebhook();
+        }
+
+        /* Check Invitation Link URL query parameters */
+        function checkUrlInviteParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            isStaffInvite = urlParams.get('ref') === 'staff_invite';
+            if (isStaffInvite) {
+                const inviteAlert = document.getElementById('invite-alert');
+                if (inviteAlert) inviteAlert.classList.remove('hidden');
+            }
+        }
+
+        /* Initial UI setup & Login check */
+        function setupInitialUI() {
+            // Never allow a staff invitation to bootstrap an administrator.
+            if (!state.users || state.users.length === 0) {
+                if (isStaffInvite) {
+                    document.getElementById('auth-title').innerText = "بانتظار تهيئة النظام من المالك";
+                    document.getElementById('auth-subtitle').innerText = "لا يمكن لرابط دعوة الموظف إنشاء حساب المدير";
+                } else {
+                    document.getElementById('first-user-banner').classList.remove('hidden');
+                    document.getElementById('owner-setup-fields').classList.remove('hidden');
+                    document.getElementById('auth-title').innerText = "تهيئة حساب مدير النظام";
+                    document.getElementById('auth-btn-text').innerText = "إنشاء حساب المدير والبدء";
+                }
+            }
+
+            if (state.currentUser) {
+                showDashboardScreen();
+            } else {
+                showAuthScreen();
+            }
+            updateLanguageUI();
+        }
+
+        /* ==========================================================================
+           AUTHENTICATION & USER MANAGEMENT
+           ========================================================================== */
+        function handleAuthSubmit(e) {
+            e.preventDefault();
+            const usernameInput = document.getElementById('auth-username').value.trim();
+            const passwordInput = document.getElementById('auth-password').value;
+            const newPasswordInput = document.getElementById('auth-new-password').value;
+
+            // Scenario 1: Owner-only first-time setup. There is no automatic admin.
+            if (!state.users || state.users.length === 0) {
+                const ownerSetupCode = document.getElementById('owner-setup-code').value.trim();
+                if (isStaffInvite) {
+                    showToast(state.lang === 'ar' ? 'هذه دعوة موظف ولا يمكن استخدامها لإنشاء حساب المدير' : 'This staff invitation cannot create the administrator account', 'error');
+                    return;
+                }
+                if (OWNER_SETUP_CODE === 'CHANGE_THIS_OWNER_CODE' || ownerSetupCode !== OWNER_SETUP_CODE) {
+                    showToast(state.lang === 'ar' ? 'رمز تهيئة المالك غير صحيح. يجب على مالك النظام تهيئة النسخة أولاً.' : 'Invalid owner setup code. The owner must initialize this copy first.', 'error');
+                    return;
+                }
+                const adminUser = {
+                    id: 'usr_' + Date.now(),
+                    username: usernameInput,
+                    password: passwordInput,
+                    role: 'ADMIN',
+                    status: 'ACTIVE',
+                    mustChangePassword: false,
+                    allowEditAfterRelogin: true,
+                    permissions: createFullPermissionsObject(true)
+                };
+                state.users.push(adminUser);
+                state.currentUser = adminUser;
+                saveStateToStorage();
+                showToast(state.lang === 'ar' ? 'تم إنشاء حساب المدير بنجاح!' : 'Admin created successfully!');
+                showDashboardScreen();
+                return;
+            }
+
+            // Scenario 2: Normal Login
+            const existingUser = state.users.find(u => u.username.toLowerCase() === usernameInput.toLowerCase());
+
+            if (!existingUser) {
+                showToast(state.lang === 'ar' ? 'اسم المستخدم غير موجود' : 'Username not found', 'error');
+                return;
+            }
+
+            if (existingUser.status === 'DISABLED') {
+                showToast(state.lang === 'ar' ? 'هذا الحساب معطل من قبل المدير' : 'This account is disabled', 'error');
+                return;
+            }
+
+            // Check if force change password required
+            if (existingUser.mustChangePassword) {
+                const forceDiv = document.getElementById('force-new-password-fields');
+                if (forceDiv.classList.contains('hidden')) {
+                    if (existingUser.password === passwordInput) {
+                        forceDiv.classList.remove('hidden');
+                        showToast(state.lang === 'ar' ? 'يرجى إدخال كلمة المرور الجديدة الخاصة بك' : 'Please enter your new password');
+                        return;
+                    } else {
+                        showToast(state.lang === 'ar' ? 'كلمة المرور المؤقتة غير صحيحة' : 'Invalid temp password', 'error');
+                        return;
+                    }
+                } else {
+                    if (!newPasswordInput || newPasswordInput.length < 4) {
+                        showToast(state.lang === 'ar' ? 'يرجى إدخال كلمة مرور جديدة معقدة' : 'New password too short', 'error');
+                        return;
+                    }
+                    existingUser.password = newPasswordInput;
+                    existingUser.mustChangePassword = false;
+                    state.currentUser = existingUser;
+                    saveStateToStorage();
+                    showToast(state.lang === 'ar' ? 'تم تحديث كلمة المرور وتفعيل الحساب' : 'Password updated');
+                    showDashboardScreen();
+                    return;
+                }
+            }
+
+            // Normal Password Verify
+            if (existingUser.password === passwordInput) {
+                state.currentUser = existingUser;
+                saveStateToStorage();
+                showDashboardScreen();
+                showToast(state.lang === 'ar' ? 'أهلاً بك مجدداً!' : 'Welcome back!');
+            } else {
+                showToast(state.lang === 'ar' ? 'كلمة المرور غير صحيحة' : 'Invalid password', 'error');
+            }
+        }
+
+        function handleLogout() {
+            state.currentUser = null;
+            saveStateToStorage();
+            showAuthScreen();
+        }
+
+        function createFullPermissionsObject(defaultAllowed = true) {
+            const permObj = {};
+            PERMISSION_KEYS.forEach(p => {
+                permObj[p.key] = defaultAllowed;
+            });
+            return permObj;
+        }
+
+        function checkUserPermission(permKey) {
+            if (!state.currentUser) return false;
+            if (state.currentUser.role === 'ADMIN') return true;
+            return state.currentUser.permissions && state.currentUser.permissions[permKey] === true;
+        }
+
+        /* ==========================================================================
+           SCREEN & TAB SWITCHING LOGIC
+           ========================================================================== */
+        function showAuthScreen() {
+            document.getElementById('auth-screen').classList.remove('hidden');
+            document.getElementById('dashboard-screen').classList.add('hidden');
+        }
+
+        function showDashboardScreen() {
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('dashboard-screen').classList.remove('hidden');
+
+            // Render Header Info
+            document.getElementById('nav-user-name').innerText = state.currentUser.username;
+            document.getElementById('nav-user-role').innerText = state.currentUser.role === 'ADMIN' ? 
+                (state.lang === 'ar' ? 'مدير النظام' : 'System Admin') : 
+                (state.lang === 'ar' ? 'موظف / مستخدم' : 'Staff User');
+
+            // Show Admin-only Elements
+            const isAdmin = state.currentUser.role === 'ADMIN';
+            document.getElementById('btn-drive-sync').style.display = isAdmin ? 'inline-flex' : 'none';
+            document.getElementById('btn-copy-invite').style.display = isAdmin ? 'inline-flex' : 'none';
+            document.getElementById('tab-btn-settings').style.display = isAdmin ? 'inline-flex' : 'none';
+
+            // Apply Granular Permissions to UI Tabs
+            document.getElementById('tab-btn-payments').style.display = checkUserPermission('viewPayments') ? 'inline-flex' : 'none';
+            document.getElementById('tab-btn-employees').style.display = checkUserPermission('viewEmployees') ? 'inline-flex' : 'none';
+            document.getElementById('tab-btn-expenses').style.display = checkUserPermission('viewExpenses') ? 'inline-flex' : 'none';
+            document.getElementById('tab-btn-finance').style.display = checkUserPermission('viewFinancialPage') ? 'inline-flex' : 'none';
+
+            // Initial Tab Render
+            switchTab('students');
+            checkUpcomingBirthdays();
+        }
+
+        function switchTab(tabId) {
+            // Permission Guard
+            if (tabId === 'payments' && !checkUserPermission('viewPayments')) return;
+            if (tabId === 'employees' && !checkUserPermission('viewEmployees')) return;
+            if (tabId === 'expenses' && !checkUserPermission('viewExpenses')) return;
+            if (tabId === 'finance' && !checkUserPermission('viewFinancialPage')) return;
+            if (tabId === 'settings' && state.currentUser.role !== 'ADMIN') return;
+
+            // Hide all panels
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+
+            // Show selected
+            const activePanel = document.getElementById(`panel-${tabId}`);
+            if (activePanel) activePanel.classList.remove('hidden');
+
+            // Update Tab Button Active Styles
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                if (btn.dataset.tab === tabId) {
+                    btn.className = "tab-btn px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition flex items-center gap-2 bg-brand-600 text-white shadow-sm";
+                } else {
+                    btn.className = "tab-btn px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition flex items-center gap-2 text-slate-300 hover:bg-slate-700/50";
+                }
+            });
+
+            // Trigger Tab Specific Renderers
+            if (tabId === 'students') renderStudentsList();
+            if (tabId === 'payments') renderPaymentsTable();
+            if (tabId === 'employees') renderEmployeesTable();
+            if (tabId === 'expenses') renderExpensesTable();
+            if (tabId === 'finance') renderFinanceOverview();
+            if (tabId === 'settings') renderUsersTable();
+        }
+
+        /* ==========================================================================
+           TAB 1: STUDENTS MANAGEMENT LOGIC
+           ========================================================================== */
+        let tempPhotoBase64 = '';
+        let tempAttachmentsList = [];
+
+        function previewStudentPhoto(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    tempPhotoBase64 = e.target.result;
+                    document.getElementById('student-photo-preview').src = tempPhotoBase64;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // Handle File attachments selection
+        document.getElementById('student-files-input')?.addEventListener('change', function(e) {
+            const files = Array.from(e.target.files);
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    tempAttachmentsList.push({
+                        name: file.name,
+                        size: (file.size / 1024).toFixed(1) + ' KB',
+                        data: evt.target.result
+                    });
+                    renderAttachmentsPreview();
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+
+        function renderAttachmentsPreview() {
+            const container = document.getElementById('attachments-preview-list');
+            if (!container) return;
+            container.innerHTML = tempAttachmentsList.map((att, idx) => `
+                <div class="px-2.5 py-1 bg-slate-100 rounded-lg text-[11px] flex items-center gap-2 border border-slate-200">
+                    <i class="fa-solid fa-paperclip text-slate-500"></i>
+                    <span class="truncate max-w-[120px]">${att.name}</span>
+                    <button type="button" onclick="removeAttachment(${idx})" class="text-rose-500 hover:text-rose-700"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            `).join('');
+            document.getElementById('attached-files-count').innerText = tempAttachmentsList.length ? `(${tempAttachmentsList.length} ملفات مرفقة)` : '';
+        }
+
+        function removeAttachment(idx) {
+            tempAttachmentsList.splice(idx, 1);
+            renderAttachmentsPreview();
+        }
+
+        function calculateChildAgeDetails() {
+            const dobVal = document.getElementById('student-dob').value;
+            if (!dobVal) return;
+
+            const dob = new Date(dobVal);
+            const now = new Date();
+
+            let ageYears = now.getFullYear() - dob.getFullYear();
+            let ageMonths = now.getMonth() - dob.getMonth();
+            let ageDays = now.getDate() - dob.getDate();
+
+            if (ageDays < 0) {
+                ageMonths--;
+                ageDays += 30;
+            }
+            if (ageMonths < 0) {
+                ageYears--;
+                ageMonths += 12;
+            }
+
+            // Remaining Days until next Birthday calculation
+            const nextBirthday = new Date(now.getFullYear(), dob.getMonth(), dob.getDate());
+            if (now > nextBirthday) {
+                nextBirthday.setFullYear(now.getFullYear() + 1);
+            }
+            const diffTime = Math.abs(nextBirthday - now);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            document.getElementById('calc-age-txt').innerText = state.lang === 'ar' ? 
+                `العمر: ${ageYears} سنة، ${ageMonths} شهر، ${ageDays} يوم` : 
+                `Age: ${ageYears}y, ${ageMonths}m, ${ageDays}d`;
+
+            document.getElementById('calc-bday-txt').innerText = state.lang === 'ar' ? 
+                `متبقي على عيد الميلاد: ${diffDays} يوم` : 
+                `Days to birthday: ${diffDays} days`;
+
+            document.getElementById('dob-calc-info').classList.remove('hidden');
+        }
+
+        function calculateEnrollmentDuration() {
+            const regVal = document.getElementById('student-regdate').value;
+            if (!regVal) return;
+            const reg = new Date(regVal);
+            const now = new Date();
+            const diffMonths = (now.getFullYear() - reg.getFullYear()) * 12 + (now.getMonth() - reg.getMonth());
+            
+            document.getElementById('reg-duration-txt').innerText = state.lang === 'ar' ? 
+                `مدة الالتحاق بالحضانة: ${diffMonths} شهر` : 
+                `Enrollment duration: ${diffMonths} months`;
+        }
+
+        function handleStudentSave(e) {
+            e.preventDefault();
+            const editingId = document.getElementById('student-id').value;
+            if (!editingId && !checkUserPermission('addStudent')) {
+                showToast(state.lang === 'ar' ? 'ليس لديك صلاحية إضافة طالب' : 'No permission to add student', 'error');
+                return;
+            }
+            if (editingId && !checkUserPermission('editStudent')) {
+                showToast(state.lang === 'ar' ? 'ليس لديك صلاحية تعديل الطالب' : 'No permission to edit student', 'error');
+                return;
+            }
+
+            const id = editingId || 'std_' + Date.now();
+            const existingStd = state.students.find(s => s.id === id);
+
+            // Re-login User Permission Check for non-admins
+            if (existingStd && state.currentUser.role !== 'ADMIN') {
+                if (existingStd.createdBy !== state.currentUser.username) {
+                    showToast(state.lang === 'ar' ? 'لا يمكنك تعديل طالب تم تسجيله بواسطة مستخدم آخر' : 'Cannot edit student created by others', 'error');
+                    return;
+                }
+                if (!state.currentUser.allowEditAfterRelogin) {
+                    showToast(state.lang === 'ar' ? 'تعديل البيانات يتطلب موافقة وتفعيل من المدير أولاً' : 'Edit permission required from admin', 'error');
+                    return;
+                }
+            }
+
+            const studentObj = {
+                id: id,
+                fullName: document.getElementById('student-name').value.trim(),
+                phone: document.getElementById('student-phone').value.trim(),
+                dob: document.getElementById('student-dob').value,
+                regDate: document.getElementById('student-regdate').value,
+                photo: tempPhotoBase64 || (existingStd ? existingStd.photo : 'https://placehold.co/150x150/e2e8f0/64748b?text=طفل'),
+                attachments: [...tempAttachmentsList],
+                createdBy: existingStd ? existingStd.createdBy : state.currentUser.username,
+                createdAt: existingStd ? existingStd.createdAt : new Date().toISOString()
+            };
+
+            if (existingStd) {
+                const idx = state.students.findIndex(s => s.id === id);
+                state.students[idx] = studentObj;
+                showToast(state.lang === 'ar' ? 'تم تحديث بيانات الطالب' : 'Student updated');
+            } else {
+                state.students.push(studentObj);
+                showToast(state.lang === 'ar' ? 'تم تسجيل الطالب جديد بنجاح' : 'New student registered');
+            }
+
+            saveStateToStorage();
+            resetStudentForm();
+            renderStudentsList();
+            checkUpcomingBirthdays();
+        }
+
+        function resetStudentForm() {
+            document.getElementById('student-form').reset();
+            document.getElementById('student-id').value = '';
+            tempPhotoBase64 = '';
+            tempAttachmentsList = [];
+            document.getElementById('student-photo-preview').src = 'https://placehold.co/150x150/e2e8f0/64748b?text=صورة+الطفل';
+            document.getElementById('dob-calc-info').classList.add('hidden');
+            document.getElementById('reg-duration-txt').innerText = '';
+            renderAttachmentsPreview();
+        }
+
+        function renderStudentsList() {
+            const tbody = document.getElementById('students-table-body');
+            if (!tbody) return;
+
+            const searchQuery = (document.getElementById('search-student-input')?.value || '').toLowerCase();
+            const filtered = state.students.filter(s => 
+                s.fullName.toLowerCase().includes(searchQuery) || s.phone.includes(searchQuery)
+            );
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400">لا توجد بيانات طلاب مطابقة</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map((s, idx) => {
+                const canEdit = state.currentUser.role === 'ADMIN' || 
+                    (s.createdBy === state.currentUser.username && state.currentUser.allowEditAfterRelogin);
+
+                return `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="p-3 text-center font-bold text-slate-400">${idx + 1}</td>
+                        <td class="p-3">
+                            <img src="${s.photo}" class="w-9 h-9 rounded-xl object-cover border border-slate-200 shadow-sm">
+                        </td>
+                        <td class="p-3 font-bold text-slate-800">${s.fullName}</td>
+                        <td class="p-3">${s.dob}</td>
+                        <td class="p-3 font-mono">${s.phone}</td>
+                        <td class="p-3">${s.regDate}</td>
+                        <td class="p-3">
+                            <span class="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md font-semibold text-[10px]">
+                                <i class="fa-solid fa-user-pen me-1"></i>${s.createdBy}
+                            </span>
+                        </td>
+                        <td class="p-3 text-center">
+                            <div class="flex items-center justify-center gap-1.5">
+                                <button onclick="previewPrintStudent('${s.id}')" title="معاينة وطباعة" class="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg">
+                                    <i class="fa-solid fa-print"></i>
+                                </button>
+                                ${canEdit ? `
+                                    <button onclick="editStudent('${s.id}')" title="تعديل" class="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                ` : ''}
+                                ${state.currentUser.role === 'ADMIN' || checkUserPermission('deleteStudent') ? `
+                                    <button onclick="deleteStudent('${s.id}')" title="حذف" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function editStudent(id) {
+            if (!checkUserPermission('editStudent')) {
+                showToast(state.lang === 'ar' ? 'ليس لديك صلاحية تعديل الطالب' : 'No permission to edit student', 'error');
+                return;
+            }
+            const s = state.students.find(item => item.id === id);
+            if (!s) return;
+
+            document.getElementById('student-id').value = s.id;
+            document.getElementById('student-name').value = s.fullName;
+            document.getElementById('student-phone').value = s.phone;
+            document.getElementById('student-dob').value = s.dob;
+            document.getElementById('student-regdate').value = s.regDate;
+            document.getElementById('student-photo-preview').src = s.photo;
+            tempPhotoBase64 = s.photo;
+            tempAttachmentsList = [...(s.attachments || [])];
+
+            renderAttachmentsPreview();
+            calculateChildAgeDetails();
+            calculateEnrollmentDuration();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function deleteStudent(id) {
+            if (!checkUserPermission('deleteStudent')) {
+                showToast(state.lang === 'ar' ? 'ليس لديك صلاحية حذف الطالب' : 'No permission to delete student', 'error');
+                return;
+            }
+            if (!confirm(state.lang === 'ar' ? 'هل أنت تأكد من حذف هذا الطالب نهائياً؟' : 'Are you sure you want to delete this student?')) return;
+            state.students = state.students.filter(s => s.id !== id);
+            saveStateToStorage();
+            renderStudentsList();
+            showToast(state.lang === 'ar' ? 'تم حذف الطالب' : 'Student deleted');
+        }
+
+        /* ==========================================================================
+           TAB 2: PAYMENTS SYSTEM LOGIC
+           ========================================================================== */
+        function renderPaymentsTable() {
+            const container = document.getElementById('payments-cards-container');
+            const year = document.getElementById('payment-year-select').value;
+            const filterStdId = document.getElementById('payment-student-filter').value;
+            if (!container) return;
+
+            // Populate Student Select Filter Options
+            const filterSelect = document.getElementById('payment-student-filter');
+            if (filterSelect && filterSelect.options.length <= 1) {
+                state.students.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.id;
+                    opt.innerText = s.fullName;
+                    filterSelect.appendChild(opt);
+                });
+            }
+
+            const activeStudents = filterStdId === 'ALL' ? state.students : state.students.filter(s => s.id === filterStdId);
+
+            if (activeStudents.length === 0) {
+                container.innerHTML = `<div class="p-8 text-center text-slate-400">لا يوجد طلاب مسجلين في النظام بعد.</div>`;
+                return;
+            }
+
+            const monthNames = state.lang === 'ar' ? MONTHS_AR : MONTHS_EN;
+            const currentMonthIdx = new Date().getMonth();
+
+            container.innerHTML = activeStudents.map(std => {
+                return `
+                    <div class="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-4">
+                        <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                            <div class="flex items-center gap-3">
+                                <img src="${std.photo}" class="w-10 h-10 rounded-xl object-cover border border-slate-300">
+                                <div>
+                                    <h4 class="font-bold text-slate-800 text-sm">${std.fullName}</h4>
+                                    <p class="text-[10px] text-slate-500">رقم الهاتف: ${std.phone}</p>
+                                </div>
+                            </div>
+                            <span class="text-xs font-extrabold text-brand-700 bg-brand-50 px-3 py-1 rounded-xl">السنة: ${year}</span>
+                        </div>
+
+                        <!-- Months Payment Grid -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                            ${monthNames.map((mName, mIdx) => {
+                                const payKey = `${std.id}_${year}_${mIdx}`;
+                                const payRecord = state.payments[payKey] || { amount: 0, status: 'UNPAID', date: '', notes: '' };
+                                const isPaid = payRecord.amount > 0;
+
+                                return `
+                                    <div class="p-3 bg-white rounded-xl border ${isPaid ? 'border-emerald-300 shadow-sm' : 'border-slate-200'} space-y-2">
+                                        <div class="flex justify-between items-center">
+                                            <span class="font-bold text-xs text-slate-700">${mName}</span>
+                                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${isPaid ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+                                                ${isPaid ? (state.lang === 'ar' ? 'تم الدفع' : 'Paid') : (state.lang === 'ar' ? 'لم يدفع' : 'Unpaid')}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <input type="number" value="${payRecord.amount || ''}" placeholder="0.00" 
+                                                onchange="updatePaymentRecord('${std.id}', '${year}', ${mIdx}, this.value)"
+                                                ${!checkUserPermission('editPayments') ? 'disabled' : ''}
+                                                class="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono focus:ring-1 focus:ring-brand-500 outline-none">
+                                        </div>
+                                        <div class="text-[10px] text-slate-400 flex justify-between">
+                                            <span>${payRecord.date ? payRecord.date : ''}</span>
+                                            <span>${payRecord.recordedBy ? payRecord.recordedBy : ''}</span>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updatePaymentRecord(stdId, year, monthIdx, amountVal) {
+            if (!checkUserPermission('editPayments')) {
+                showToast(state.lang === 'ar' ? 'غير مصرح لك بتعديل المدفوعات' : 'No payment edit permissions', 'error');
+                return;
+            }
+
+            const numVal = parseFloat(amountVal) || 0;
+            const payKey = `${stdId}_${year}_${monthIdx}`;
+
+            state.payments[payKey] = {
+                amount: numVal,
+                status: numVal > 0 ? 'PAID' : 'UNPAID',
+                date: new Date().toLocaleDateString('ar-EG'),
+                recordedBy: state.currentUser.username
+            };
+
+            saveStateToStorage();
+            renderPaymentsTable();
+            showToast(state.lang === 'ar' ? 'تم تحديث سجل الدفع' : 'Payment record saved');
+        }
+
+        /* ==========================================================================
+           TAB 3 & 4: EMPLOYEES & EXPENSES MANAGEMENT
+           ========================================================================== */
+        function renderEmployeesTable() {
+            const tbody = document.getElementById('employees-table-body');
+            if (!tbody) return;
+
+            if (state.employees.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400">لا يوجد موظفين حالياً</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = state.employees.map(e => {
+                const netSalary = (parseFloat(e.salary) || 0) + (parseFloat(e.bonuses) || 0) - (parseFloat(e.deductions) || 0);
+                return `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-3 font-bold text-slate-800">${e.name}</td>
+                        <td class="p-3">${e.role}</td>
+                        <td class="p-3 font-mono">${e.phone}</td>
+                        <td class="p-3 font-mono">${e.salary}</td>
+                        <td class="p-3 font-mono text-emerald-600">+${e.bonuses}</td>
+                        <td class="p-3 font-mono text-rose-600">-${e.deductions}</td>
+                        <td class="p-3 font-mono font-bold text-slate-800">${netSalary.toFixed(2)}</td>
+                        <td class="p-3 text-center">
+                            <button onclick="deleteEmployee('${e.id}')" class="p-1.5 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function openEmployeeModal() {
+            if (!checkUserPermission('addEmployee')) {
+                showToast(state.lang === 'ar' ? 'ليس لديك صلاحية إضافة موظف' : 'No permission to add employee', 'error');
+                return;
+            }
+            document.getElementById('employee-form').reset();
+            document.getElementById('emp-id').value = '';
+            document.getElementById('emp-salary').value = '0';
+            document.getElementById('emp-bonuses').value = '0';
+            document.getElementById('emp-deductions').value = '0';
+            document.getElementById('modal-employee-edit').classList.remove('hidden');
+        }
+        function closeEmployeeModal() { document.getElementById('modal-employee-edit').classList.add('hidden'); }
+
+        function handleEmployeeSave(e) {
+            e.preventDefault();
+            if (!checkUserPermission('addEmployee')) {
+                showToast(state.lang === 'ar' ? 'ليس لديك صلاحية إضافة موظف' : 'No permission to add employee', 'error');
+                return;
+            }
+            const empObj = {
+                id: 'emp_' + Date.now(),
+                name: document.getElementById('emp-name').value,
+                role: document.getElementById('emp-role').value,
+                phone: document.getElementById('emp-phone').value,
+                salary: parseFloat(document.getElementById('emp-salary').value) || 0,
+                bonuses: parseFloat(document.getElementById('emp-bonuses').value) || 0,
+                deductions: parseFloat(document.getElementById('emp-deductions').value) || 0,
+            };
+
+            state.employees.push(empObj);
+            saveStateToStorage();
+            closeEmployeeModal();
+            renderEmployeesTable();
+            showToast(state.lang === 'ar' ? 'تم إضافة الموظف' : 'Employee added');
+        }
+
+        function deleteEmployee(id) {
+            if (!checkUserPermission('deleteEmployee')) {
+                showToast(state.lang === 'ar' ? 'ليس لديك صلاحية حذف الموظف' : 'No permission to delete employee', 'error');
+                return;
+            }
+            if (!confirm(state.lang === 'ar' ? 'هل تريد حذف هذا الموظف؟' : 'Delete this employee?')) return;
+            state.employees = state.employees.filter(e => e.id !== id);
+            saveStateToStorage();
+            renderEmployeesTable();
+        }
+
+        // Expenses logic
+        function handleExpenseSave(e) {
+            e.preventDefault();
+            if (!checkUserPermission('addExpense')) {
+                showToast(state.lang === 'ar' ? 'ليس لديك صلاحية إضافة مصروف' : 'No permission to add expense', 'error');
+                return;
+            }
+            const exp = {
+                id: 'exp_' + Date.now(),
+                title: document.getElementById('expense-title').value,
+                amount: parseFloat(document.getElementById('expense-amount').value) || 0,
+                date: document.getElementById('expense-date').value,
+                notes: document.getElementById('expense-notes').value
+            };
+            state.expenses.push(exp);
+            saveStateToStorage();
+            document.getElementById('expense-form').reset();
+            renderExpensesTable();
+            showToast(state.lang === 'ar' ? 'تم إضافة المصروف' : 'Expense logged');
+        }
+
+        function renderExpensesTable() {
+            const tbody = document.getElementById('expenses-table-body');
+            if (!tbody) return;
+
+            if (state.expenses.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">لا توجد مصروفات مسجلة</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = state.expenses.map(ex => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-3 font-mono">${ex.date}</td>
+                    <td class="p-3 font-bold text-slate-800">${ex.title}</td>
+                    <td class="p-3 font-mono text-rose-600 font-bold">${ex.amount.toFixed(2)}</td>
+                    <td class="p-3 text-slate-500">${ex.notes || '-'}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="deleteExpense('${ex.id}')" class="p-1 text-rose-500 hover:text-rose-700"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function deleteExpense(id) {
+            if (!checkUserPermission('addExpense')) {
+                showToast(state.lang === 'ar' ? 'ليس لديك صلاحية حذف المصروف' : 'No permission to delete expense', 'error');
+                return;
+            }
+            if (!confirm(state.lang === 'ar' ? 'هل تريد حذف هذا المصروف؟' : 'Delete this expense?')) return;
+            state.expenses = state.expenses.filter(ex => ex.id !== id);
+            saveStateToStorage();
+            renderExpensesTable();
+        }
+
+        /* ==========================================================================
+           TAB 5: FINANCIAL DASHBOARD CALCULATIONS
+           ========================================================================== */
+        function renderFinanceOverview() {
+            let totalIncome = 0;
+            Object.values(state.payments).forEach(p => {
+                totalIncome += (p.amount || 0);
+            });
+
+            let totalSalaries = 0;
+            state.employees.forEach(e => {
+                totalSalaries += (e.salary + e.bonuses - e.deductions);
+            });
+
+            let totalExp = 0;
+            state.expenses.forEach(ex => {
+                totalExp += ex.amount;
+            });
+
+            const grandExpenses = totalSalaries + totalExp;
+            const netProfit = totalIncome - grandExpenses;
+
+            document.getElementById('stat-total-income').innerText = totalIncome.toFixed(2);
+            document.getElementById('stat-total-expenses').innerText = grandExpenses.toFixed(2);
+            document.getElementById('stat-net-profit').innerText = netProfit.toFixed(2);
+
+            // Progress bar
+            const targetIncomeGoal = (state.students.length * 12 * 500) || 10000;
+            const pct = Math.min(100, Math.round((totalIncome / targetIncomeGoal) * 100));
+            document.getElementById('income-percentage-txt').innerText = `${pct}%`;
+            document.getElementById('income-progress-bar').style.width = `${pct}%`;
+        }
+
+        /* ==========================================================================
+           TAB 6: USER MANAGEMENT & PERMISSIONS GRID (Admin Only)
+           ========================================================================== */
+        function renderUsersTable() {
+            const tbody = document.getElementById('users-table-body');
+            if (!tbody) return;
+
+            tbody.innerHTML = state.users.map(u => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-3 font-bold text-slate-800">${u.username}</td>
+                    <td class="p-3">${u.role === 'ADMIN' ? 'مدير' : 'موظف'}</td>
+                    <td class="p-3">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${u.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+                            ${u.status === 'ACTIVE' ? 'نشط' : 'معطل'}
+                        </span>
+                    </td>
+                    <td class="p-3">
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="checkbox" ${u.allowEditAfterRelogin ? 'checked' : ''} onchange="toggleUserEditPermission('${u.id}', this.checked)" class="sr-only peer">
+                            <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-600 relative"></div>
+                        </label>
+                    </td>
+                    <td class="p-3 text-center">
+                        <div class="flex items-center justify-center gap-1.5">
+                            <button onclick="editUserPermissions('${u.id}')" class="px-2.5 py-1 bg-brand-50 text-brand-700 font-bold rounded-lg hover:bg-brand-100">
+                                <i class="fa-solid fa-sliders me-1"></i> الصلاحيات
+                            </button>
+                            ${u.role !== 'ADMIN' ? `
+                                <button onclick="toggleUserStatus('${u.id}')" class="p-1.5 bg-slate-100 text-slate-600 rounded-lg">
+                                    <i class="fa-solid fa-power-off"></i>
+                                </button>
+                                <button onclick="deleteUser('${u.id}')" class="p-1.5 bg-rose-50 text-rose-600 rounded-lg">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function toggleUserEditPermission(userId, allow) {
+            const u = state.users.find(usr => usr.id === userId);
+            if (u) {
+                u.allowEditAfterRelogin = allow;
+                saveStateToStorage();
+                showToast(state.lang === 'ar' ? 'تم تحديث حالة سماح التعديل' : 'Edit permission toggled');
+            }
+        }
+
+        function openCreateUserModal() {
+            document.getElementById('edit-user-id').value = '';
+            document.getElementById('edit-username').value = '';
+            document.getElementById('edit-user-pass').value = '';
+            renderPermissionsCheckboxes(createFullPermissionsObject(true));
+            document.getElementById('modal-user-edit').classList.remove('hidden');
+        }
+
+        function editUserPermissions(userId) {
+            const u = state.users.find(usr => usr.id === userId);
+            if (!u) return;
+
+            document.getElementById('edit-user-id').value = u.id;
+            document.getElementById('edit-username').value = u.username;
+            document.getElementById('edit-user-pass').value = '';
+            renderPermissionsCheckboxes(u.permissions || createFullPermissionsObject(true));
+            document.getElementById('modal-user-edit').classList.remove('hidden');
+        }
+
+        function closeUserModal() { document.getElementById('modal-user-edit').classList.add('hidden'); }
+
+        function renderPermissionsCheckboxes(permObj) {
+            const grid = document.getElementById('permissions-grid');
+            if (!grid) return;
+
+            grid.innerHTML = PERMISSION_KEYS.map(p => {
+                const checked = permObj[p.key] !== false;
+                return `
+                    <label class="flex items-center gap-2 p-2 bg-white rounded-xl border border-slate-200 cursor-pointer">
+                        <input type="checkbox" name="perm_${p.key}" ${checked ? 'checked' : ''} class="rounded text-brand-600 focus:ring-brand-500">
+                        <span>${state.lang === 'ar' ? p.ar : p.en}</span>
+                    </label>
+                `;
+            }).join('');
+        }
+
+        function handleUserSave(e) {
+            e.preventDefault();
+            const userId = document.getElementById('edit-user-id').value;
+            const username = document.getElementById('edit-username').value.trim();
+            const pass = document.getElementById('edit-user-pass').value;
+
+            // Collect permission checkboxes
+            const permObj = {};
+            PERMISSION_KEYS.forEach(p => {
+                const el = document.querySelector(`input[name="perm_${p.key}"]`);
+                permObj[p.key] = el ? el.checked : true;
+            });
+
+            if (userId) {
+                // Update User
+                const u = state.users.find(usr => usr.id === userId);
+                if (u) {
+                    u.username = username;
+                    if (pass) {
+                        u.password = pass;
+                        u.mustChangePassword = true; // force new password on first login
+                    }
+                    u.permissions = permObj;
+                }
+            } else {
+                // New User
+                const newUser = {
+                    id: 'usr_' + Date.now(),
+                    username: username,
+                    password: pass || '123456',
+                    role: 'STAFF',
+                    status: 'ACTIVE',
+                    mustChangePassword: true,
+                    allowEditAfterRelogin: false,
+                    permissions: permObj
+                };
+                state.users.push(newUser);
+            }
+
+            saveStateToStorage();
+            closeUserModal();
+            renderUsersTable();
+            showToast(state.lang === 'ar' ? 'تم حفظ بيانات المستخدم' : 'User saved');
+        }
+
+        function toggleUserStatus(userId) {
+            const u = state.users.find(usr => usr.id === userId);
+            if (u) {
+                u.status = u.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE';
+                saveStateToStorage();
+                renderUsersTable();
+            }
+        }
+
+        function deleteUser(userId) {
+            if (!confirm('هل تريد حذف هذا المستخدم؟')) return;
+            state.users = state.users.filter(u => u.id !== userId);
+            saveStateToStorage();
+            renderUsersTable();
+        }
+
+        /* ==========================================================================
+           BIRTHDAYS NOTIFICATION LOGIC
+           ========================================================================== */
+        function checkUpcomingBirthdays() {
+            const upcoming = [];
+            const today = new Date();
+
+            state.students.forEach(std => {
+                if (!std.dob) return;
+                const dob = new Date(std.dob);
+                const nextBday = new Date(today.getFullYear(), dob.getMonth(), dob.getDate());
+                
+                if (today > nextBday) {
+                    nextBday.setFullYear(today.getFullYear() + 1);
+                }
+
+                const diffDays = Math.ceil((nextBday - today) / (1000 * 60 * 60 * 24));
+                if (diffDays === 1) { // 1 day before birthday
+                    upcoming.push(std);
+                }
+            });
+
+            const badge = document.getElementById('birthday-count-badge');
+            const alertBanner = document.getElementById('top-birthday-alert');
+
+            if (upcoming.length > 0) {
+                badge.innerText = upcoming.length;
+                badge.classList.remove('hidden');
+                if (alertBanner) alertBanner.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+                if (alertBanner) alertBanner.classList.add('hidden');
+            }
+        }
+
+        function toggleBirthdayModal() {
+            const modal = document.getElementById('modal-birthdays');
+            modal.classList.toggle('hidden');
+
+            const list = document.getElementById('birthday-modal-list');
+            if (!list) return;
+
+            const today = new Date();
+            const upcoming = state.students.filter(std => {
+                if (!std.dob) return false;
+                const dob = new Date(std.dob);
+                const nextBday = new Date(today.getFullYear(), dob.getMonth(), dob.getDate());
+                if (today > nextBday) nextBday.setFullYear(today.getFullYear() + 1);
+                const diffDays = Math.ceil((nextBday - today) / (1000 * 60 * 60 * 24));
+                return diffDays <= 2;
+            });
+
+            if (upcoming.length === 0) {
+                list.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">لا توجد أعياد ميلاد غداً.</p>`;
+            } else {
+                list.innerHTML = upcoming.map(std => `
+                    <div class="flex items-center gap-3 p-2 bg-amber-50 rounded-xl border border-amber-200">
+                        <img src="${std.photo}" class="w-10 h-10 rounded-xl object-cover">
+                        <div>
+                            <div class="font-bold text-xs text-slate-800">${std.fullName}</div>
+                            <div class="text-[10px] text-amber-700">تاريخ الميلاد: ${std.dob}</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        /* ==========================================================================
+           PRINT & REPORT PREVIEW
+           ========================================================================== */
+        function previewPrintStudent(stdId) {
+            const std = state.students.find(s => s.id === stdId);
+            if (!std) return;
+
+            const area = document.getElementById('printable-area');
+            const canViewPayments = checkUserPermission('viewPayments');
+
+            // Render Single Student Profile Sheet
+            area.innerHTML = `
+                <div class="p-6 border-2 border-slate-800 rounded-3xl space-y-6">
+                    <!-- Header -->
+                    <div class="flex justify-between items-center border-b pb-4 border-slate-300">
+                        <div>
+                            <h1 class="text-2xl font-black text-slate-900">حضانة AdamN النموذجية</h1>
+                            <p class="text-xs text-slate-500">تقرير ملف بيانات الطالب التفصيلي</p>
+                        </div>
+                        <img src="${std.photo}" class="w-20 h-20 rounded-2xl object-cover border-2 border-slate-800 shadow">
+                    </div>
+
+                    <!-- Personal Info Grid -->
+                    <div class="grid grid-cols-2 gap-4 text-xs">
+                        <div><strong>اسم الطالب:</strong> ${std.fullName}</div>
+                        <div><strong>هاتف ولي الأمر:</strong> ${std.phone}</div>
+                        <div><strong>تاريخ الميلاد:</strong> ${std.dob}</div>
+                        <div><strong>تاريخ التقديم:</strong> ${std.regDate}</div>
+                        <div><strong>مسجل بواسطة:</strong> ${std.createdBy}</div>
+                    </div>
+
+                    ${canViewPayments ? `
+                        <!-- Financial Payment Log Summary -->
+                        <div class="space-y-2 pt-4 border-t border-slate-200">
+                            <h3 class="font-bold text-sm text-slate-800">بيانات وسجل مدفوعات الطالب (2026)</h3>
+                            <div class="grid grid-cols-4 gap-2 text-[10px]">
+                                ${MONTHS_AR.map((m, idx) => {
+                                    const record = state.payments[`${std.id}_2026_${idx}`];
+                                    const paid = record && record.amount > 0;
+                                    return `
+                                        <div class="p-2 border rounded-lg ${paid ? 'bg-emerald-50 text-emerald-800' : 'bg-rose-50 text-rose-800'}">
+                                            <div><strong>${m}</strong></div>
+                                            <div>${paid ? record.amount + ' ج.م' : 'غير مدفوع'}</div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <div class="pt-8 text-center text-[10px] text-slate-400 border-t">
+                        تم استخراج هذا الملف تلقائياً بواسطة نظام AdamN - ${new Date().toLocaleString('ar-EG')}
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('modal-print-preview').classList.remove('hidden');
+        }
+
+        function openPrintModal(mode) {
+            if (mode === 'all') {
+                const area = document.getElementById('printable-area');
+                area.innerHTML = `
+                    <div class="p-4 space-y-4">
+                        <h2 class="text-xl font-bold text-center border-b pb-2">تقرير جميع الطلاب المسجلين بالحضانة</h2>
+                        <table class="w-full text-end text-xs border-collapse">
+                            <thead>
+                                <tr class="border-b bg-slate-100">
+                                    <th class="p-2">#</th>
+                                    <th class="p-2">الاسم</th>
+                                    <th class="p-2">تاريخ الميلاد</th>
+                                    <th class="p-2">الهاتف</th>
+                                    <th class="p-2">تاريخ التقديم</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${state.students.map((s, i) => `
+                                    <tr class="border-b">
+                                        <td class="p-2">${i+1}</td>
+                                        <td class="p-2 font-bold">${s.fullName}</td>
+                                        <td class="p-2">${s.dob}</td>
+                                        <td class="p-2">${s.phone}</td>
+                                        <td class="p-2">${s.regDate}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                document.getElementById('modal-print-preview').classList.remove('hidden');
+            }
+        }
+
+        function closePrintModal() { document.getElementById('modal-print-preview').classList.add('hidden'); }
+
+        /* ==========================================================================
+           EXCEL MULTI-SHEET EXPORT (SheetJS)
+           ========================================================================== */
+        function exportDataToExcel() {
+            if (!checkUserPermission('exportExcel')) {
+                showToast(state.lang === 'ar' ? 'غير مصرح لك بتصدير Excel' : 'Excel export denied', 'error');
+                return;
+            }
+
+            const wb = XLSX.utils.book_new();
+
+            // 1. Students Sheet
+            const studentsData = state.students.map(s => ({
+                "ID": s.id,
+                "اسم الطالب": s.fullName,
+                "رقم الهاتف": s.phone,
+                "تاريخ الميلاد": s.dob,
+                "تاريخ الالتحاق": s.regDate,
+                "تم الإنشاء بواسطة": s.createdBy
+            }));
+            const wsStudents = XLSX.utils.json_to_sheet(studentsData);
+            XLSX.utils.book_append_sheet(wb, wsStudents, "Students");
+
+            // 2. Payments Sheet (Only if permitted)
+            if (checkUserPermission('viewPayments')) {
+                const paymentsData = [];
+                Object.keys(state.payments).forEach(key => {
+                    const p = state.payments[key];
+                    paymentsData.push({
+                        "Key": key,
+                        "المبلغ": p.amount,
+                        "الحالة": p.status,
+                        "التاريخ": p.date,
+                        "مسجل بواسطة": p.recordedBy
+                    });
+                });
+                const wsPayments = XLSX.utils.json_to_sheet(paymentsData);
+                XLSX.utils.book_append_sheet(wb, wsPayments, "Payments");
+            }
+
+            // 3. Employees Sheet
+            if (checkUserPermission('viewEmployees')) {
+                const empData = state.employees.map(e => ({
+                    "الاسم": e.name,
+                    "الوظيفة": e.role,
+                    "الهاتف": e.phone,
+                    "الراتب الأساسي": e.salary,
+                    "المكافآت": e.bonuses,
+                    "الخصومات": e.deductions
+                }));
+                const wsEmp = XLSX.utils.json_to_sheet(empData);
+                XLSX.utils.book_append_sheet(wb, wsEmp, "Employees");
+            }
+
+            // Write File
+            XLSX.writeFile(wb, `AdamN_Nursery_Report_${Date.now()}.xlsx`);
+            showToast(state.lang === 'ar' ? 'تم تصدير شيت Excel بنجاح' : 'Excel exported successfully');
+        }
+
+        /* ==========================================================================
+           GOOGLE DRIVE / LOCAL SYNC BRIDGE
+           ========================================================================== */
+        function openDriveSyncModal() {
+            document.getElementById('drive-file-url').value = state.driveSyncUrl || '';
+            document.getElementById('modal-drive-sync').classList.remove('hidden');
+        }
+
+        function closeDriveSyncModal() { document.getElementById('modal-drive-sync').classList.add('hidden'); }
+
+        function saveDriveSyncConfig() {
+            state.driveSyncUrl = document.getElementById('drive-file-url').value.trim();
+            saveStateToStorage();
+            closeDriveSyncModal();
+            showToast(state.lang === 'ar' ? 'تم حفظ وإجراء المزامنة' : 'Drive Sync configuration saved');
+        }
+
+        function checkDriveAutoSync() {
+            if (state.driveSyncUrl) {
+                syncWithDriveWebhook();
+            }
+        }
+
+        function syncWithDriveWebhook() {
+            if (!state.driveSyncUrl) return;
+            fetch(state.driveSyncUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(state)
+            }).then(() => {
+                console.log("Drive Sync push triggered successfully.");
+            }).catch(err => console.error("Drive sync error", err));
+        }
+
+        function copyUserInviteLink() {
+            const url = window.location.origin + window.location.pathname + '?ref=staff_invite';
+            navigator.clipboard.writeText(url).then(() => {
+                showToast(state.lang === 'ar' ? 'تم نسخ رابط دعوة الموظفين الجدد!' : 'Invite link copied to clipboard!');
+            }).catch(() => {
+                // Fallback for document.execCommand
+                const input = document.createElement('input');
+                input.value = url;
+                document.body.appendChild(input);
+                input.select();
+                document.execCommand('copy');
+                document.body.removeChild(input);
+                showToast(state.lang === 'ar' ? 'تم نسخ رابط الدعوة' : 'Link copied');
+            });
+        }
+
+        /* Backup / Restore JSON File */
+        function downloadBackupJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `AdamN_Backup_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importBackupJSON(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const imported = JSON.parse(evt.target.result);
+                    state = normalizeState(imported);
+                    saveStateToStorage();
+                    location.reload();
+                } catch(err) {
+                    showToast('ملف JSON غير صالح', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        /* ==========================================================================
+           INTERNATIONALIZATION (LANGUAGE TOGGLE AR/EN)
+           ========================================================================== */
+        function toggleLanguage() {
+            state.lang = state.lang === 'ar' ? 'en' : 'ar';
+            document.documentElement.dir = state.lang === 'ar' ? 'rtl' : 'ltr';
+            document.documentElement.lang = state.lang;
+            document.getElementById('current-lang-code').innerText = state.lang === 'ar' ? 'EN' : 'عربي';
+            updateLanguageUI();
+            if (state.currentUser) {
+                renderStudentsList();
+                renderPaymentsTable();
+            }
+        }
+
+        function updateLanguageUI() {
+            const isAr = state.lang === 'ar';
+            document.getElementById('lang-toggle-auth-text').innerText = isAr ? 'English' : 'عربي';
+            
+            // Text translations mappings
+            document.getElementById('nav-tagline').innerText = isAr ? 'نظام إدارة الحضانة' : 'Nursery Management';
+            document.getElementById('tab-txt-students').innerText = isAr ? 'بيانات الطلاب' : 'Students';
+            document.getElementById('tab-txt-payments').innerText = isAr ? 'المدفوعات' : 'Payments';
+            document.getElementById('tab-txt-employees').innerText = isAr ? 'الموظفين' : 'Employees';
+            document.getElementById('tab-txt-expenses').innerText = isAr ? 'المصروفات' : 'Expenses';
+            document.getElementById('tab-txt-finance').innerText = isAr ? 'المالية' : 'Financials';
+            document.getElementById('tab-txt-settings').innerText = isAr ? 'الضبط والمستخدمين' : 'Settings';
+        }
+
+        /* ==========================================================================
+           TOAST NOTIFICATION ENGINE
+           ========================================================================== */
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = `pointer-events-auto p-4 rounded-2xl shadow-xl border text-xs font-bold flex items-center justify-between transition-all transform translate-y-2 opacity-0 ${
+                type === 'error' ? 'bg-rose-900 text-white border-rose-700' : 'bg-slate-900 text-white border-slate-700'
+            }`;
+
+            toast.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <i class="${type === 'error' ? 'fa-solid fa-circle-exclamation text-rose-400' : 'fa-solid fa-circle-check text-emerald-400'} text-base"></i>
+                    <span>${msg}</span>
+                </div>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 50);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+    </script>
+</body>
+</html>
