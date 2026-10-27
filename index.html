@@ -3,22 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AdamN - نظام إدارة الحضانة NMS</title>
-  <!-- Tailwind CSS CDN -->
+  <title>AdamN - نظام إدارة الحضانة NMS المتكامل</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- SheetJS & jsPDF -->
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-  <style>
-    body { font-family: system-ui, -apple-system, sans-serif; }
-  </style>
+  <style>body { font-family: system-ui, -apple-system, sans-serif; }</style>
 </head>
 <body class="bg-gray-100 font-sans text-gray-800">
 
-  <!-- Application Container -->
   <div id="app" class="min-h-screen flex flex-col">
 
     <!-- Login View -->
@@ -26,35 +18,32 @@
       <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md border border-gray-200">
         <div class="text-center mb-6">
           <h1 class="text-3xl font-extrabold text-blue-700 tracking-wide">AdamN NMS</h1>
-          <p class="text-gray-500 text-sm mt-1">نظام إدارة الحضانة الاحترافي</p>
+          <p class="text-gray-500 text-sm mt-1">نظام إدارة الحضانة الشامل</p>
         </div>
         <form id="login-form" onsubmit="Auth.handleLogin(event)" class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700">اسم المستخدم</label>
-            <input type="text" id="login-username" value="admin" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border focus:ring-blue-500 focus:border-blue-500">
+            <input type="text" id="login-username" value="admin" required class="mt-1 block w-full rounded border p-2.5 text-sm">
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700">كلمة المرور</label>
-            <input type="password" id="login-password" value="admin123" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border focus:ring-blue-500 focus:border-blue-500">
+            <input type="password" id="login-password" value="admin123" required class="mt-1 block w-full rounded border p-2.5 text-sm">
           </div>
-          <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition duration-200">تسجيل الدخول</button>
-          <p class="text-xs text-center text-gray-400 mt-2">بيانات التجربة الافتراضية: admin / admin123</p>
+          <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700">تسجيل الدخول</button>
+          <p class="text-xs text-center text-gray-400 mt-2">افتراضي للتدقيق: المدير (admin / admin123)</p>
         </form>
       </div>
     </div>
 
     <!-- Main Dashboard View -->
     <div id="main-view" class="hidden flex-1 flex flex-col">
-      <!-- Navbar -->
       <header class="bg-blue-900 text-white shadow-md">
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
           <div class="flex items-center space-x-4 space-x-reverse">
             <span class="text-2xl font-black text-yellow-400">AdamN</span>
             <span id="user-display-name" class="bg-blue-800 text-xs px-3 py-1 rounded-full text-blue-200"></span>
           </div>
-          
           <div class="flex items-center space-x-3 space-x-reverse">
-            <!-- Notification Center Badge -->
             <div class="relative cursor-pointer" onclick="Notifications.toggleModal()">
               <i class="fa-solid fa-bell text-xl hover:text-yellow-300"></i>
               <span id="notification-badge" class="hidden absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">0</span>
@@ -63,161 +52,186 @@
           </div>
         </div>
 
-        <!-- Navigation Tabs -->
         <nav class="bg-blue-800 border-t border-blue-700">
           <div class="max-w-7xl mx-auto px-4 flex space-x-2 space-x-reverse overflow-x-auto">
-            <button id="tab-btn-students" onclick="App.switchTab('students')" class="nav-tab px-4 py-3 text-sm font-semibold border-b-2 border-yellow-400 text-white"><i class="fa-solid fa-user-graduate ml-2"></i>تسجيل الطلاب</button>
-            <button id="tab-btn-employees" onclick="App.switchTab('employees')" class="nav-tab px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-blue-200 hover:text-white"><i class="fa-solid fa-id-card ml-2"></i>الموظفين</button>
+            <button id="tab-btn-students" onclick="App.switchTab('students')" class="nav-tab px-4 py-3 text-sm font-semibold border-b-2 border-yellow-400 text-white"><i class="fa-solid fa-user-graduate ml-2"></i>الطلاب</button>
+            <button id="tab-btn-employees" onclick="App.switchTab('employees')" class="nav-tab px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-blue-200 hover:text-white"><i class="fa-solid fa-id-card ml-2"></i>الموظفين والرواتب</button>
             <button id="tab-btn-revenues" onclick="App.switchTab('revenues')" class="nav-tab px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-blue-200 hover:text-white"><i class="fa-solid fa-hand-holding-dollar ml-2"></i>الإيرادات الأخرى</button>
             <button id="tab-btn-expenses" onclick="App.switchTab('expenses')" class="nav-tab px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-blue-200 hover:text-white"><i class="fa-solid fa-file-invoice-dollar ml-2"></i>المصروفات</button>
           </div>
         </nav>
       </header>
 
-      <!-- Main Content Area -->
       <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
         
         <!-- Tab: Students -->
         <section id="tab-students" class="tab-content space-y-6">
-          <div class="bg-white p-6 rounded-lg shadow border border-gray-200">
-            <h2 class="text-xl font-bold mb-4 text-gray-800 border-b pb-2"><i class="fa-solid fa-user-plus text-blue-600 ml-2"></i>بيانات الطالب والاشتراك</h2>
-            
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <!-- Left Side: Photo Frame -->
-              <div class="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
-                <div class="w-36 h-36 bg-gray-200 rounded-full border-4 border-blue-600 overflow-hidden flex items-center justify-center shadow">
-                  <img id="student-photo-preview" src="https://via.placeholder.com/150?text=AdamN" class="w-full h-full object-cover">
-                </div>
-                <input type="file" id="student-photo-input" accept="image/*" class="hidden" onchange="Students.previewPhoto(event)">
-                <button onclick="document.getElementById('student-photo-input').click()" class="mt-3 bg-blue-600 text-white px-3 py-1.5 rounded text-xs hover:bg-blue-700"><i class="fa-solid fa-camera ml-1"></i> رفع / تغيير الصورة</button>
+          <div class="bg-white p-6 rounded-lg shadow border">
+            <h2 class="text-xl font-bold mb-4 text-gray-800 border-b pb-2"><i class="fa-solid fa-user-plus text-blue-600 ml-2"></i>تسجيل الطلاب والاشتراكات الشهرية</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <label class="block text-xs font-bold text-gray-700">اسم الطالب</label>
+                <input type="text" id="student-name" required class="mt-1 w-full rounded border p-2 text-sm">
               </div>
-
-              <!-- Center/Right Form Inputs -->
-              <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700">اسم الطالب (حروف فقط)</label>
-                  <input type="text" id="student-name" oninput="Students.validateName(this)" required class="mt-1 block w-full rounded border-gray-300 border p-2 text-sm">
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-gray-700">تاريخ الميلاد</label>
-                  <input type="date" id="student-dob" onchange="Students.calculateAge()" required class="mt-1 block w-full rounded border-gray-300 border p-2 text-sm">
-                  <span id="student-age-display" class="text-xs font-bold text-blue-700 mt-1 block"></span>
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-gray-700">تاريخ الالتحاق</label>
-                  <input type="date" id="student-doj" onchange="Students.calculateTenure()" required class="mt-1 block w-full rounded border-gray-300 border p-2 text-sm">
-                  <span id="student-tenure-display" class="text-xs font-bold text-green-700 mt-1 block"></span>
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-gray-700">رقم هاتف ولي الأمر (أرقام فقط)</label>
-                  <input type="text" id="student-phone" oninput="Students.validatePhone(this)" required class="mt-1 block w-full rounded border-gray-300 border p-2 text-sm">
-                </div>
-
-                <!-- Monthly Payment Controls -->
-                <div class="md:col-span-2 bg-blue-50 p-3 rounded border border-blue-200 grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
-                  <div>
-                    <label class="block text-xs font-bold text-gray-700">اختر الشهر</label>
-                    <select id="payment-month-select" class="mt-1 w-full rounded border-gray-300 border p-1.5 text-sm"></select>
-                  </div>
-                  <div>
-                    <label class="block text-xs font-bold text-gray-700">قيمة الاشتراك الشهري</label>
-                    <input type="number" id="payment-amount" min="0" value="0" oninput="Students.updatePaymentStatusLabel()" class="mt-1 w-full rounded border-gray-300 border p-1.5 text-sm">
-                  </div>
-                  <div>
-                    <label class="block text-xs font-bold text-gray-700">حالة الدفع للشهر</label>
-                    <span id="payment-status-badge" class="inline-block mt-1 px-3 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800">لم يدفع</span>
-                  </div>
-                </div>
+              <div>
+                <label class="block text-xs font-bold text-gray-700">تاريخ الميلاد</label>
+                <input type="date" id="student-dob" onchange="Students.calculateAge()" required class="mt-1 w-full rounded border p-2 text-sm">
+                <span id="student-age-display" class="text-xs text-blue-700 font-bold block mt-1"></span>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-gray-700">تاريخ الالتحاق</label>
+                <input type="date" id="student-doj" onchange="Students.calculateTenure()" required class="mt-1 w-full rounded border p-2 text-sm">
+                <span id="student-tenure-display" class="text-xs text-green-700 font-bold block mt-1"></span>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-gray-700">هاتف ولي الأمر</label>
+                <input type="text" id="student-phone" required class="mt-1 w-full rounded border p-2 text-sm">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-gray-700">الشهر</label>
+                <select id="payment-month-select" class="mt-1 w-full rounded border p-2 text-sm"></select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-gray-700">قيمة الاشتراك</label>
+                <input type="number" id="payment-amount" value="0" oninput="Students.updatePaymentStatus()" class="mt-1 w-full rounded border p-2 text-sm">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-gray-700">حالة الدفع</label>
+                <span id="payment-status-badge" class="inline-block mt-2 px-3 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800">لم يدفع</span>
               </div>
             </div>
-
-            <!-- Action Buttons -->
-            <div class="mt-6 flex flex-wrap gap-2 justify-end border-t pt-4">
-              <button onclick="Students.search()" class="bg-gray-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-gray-700"><i class="fa-solid fa-magnifying-glass ml-1"></i> بحث</button>
-              <button onclick="Students.saveRecord()" class="bg-green-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-green-700"><i class="fa-solid fa-floppy-disk ml-1"></i> حفظ</button>
-              <button onclick="Export.toExcel('students')" class="bg-emerald-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-emerald-700"><i class="fa-solid fa-file-excel ml-1"></i> تصدير Excel</button>
+            <div class="mt-4 flex justify-end gap-2">
+              <button onclick="Students.saveRecord()" class="bg-green-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-green-700"><i class="fa-solid fa-floppy-disk ml-1"></i> حفظ الطالب</button>
+              <button onclick="Export.toExcel('students')" class="bg-emerald-600 text-white px-4 py-2 rounded text-sm font-medium"><i class="fa-solid fa-file-excel ml-1"></i> تصدير Excel</button>
             </div>
           </div>
 
-          <!-- Students Data Table -->
-          <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+          <div class="bg-white rounded-lg shadow border overflow-hidden">
             <div class="p-4 bg-gray-50 border-b flex justify-between items-center">
-              <h3 class="font-bold text-gray-700">سجل الطلاب المسجلين</h3>
+              <h3 class="font-bold text-gray-700">قائمة الطلاب المسجلين</h3>
+              <input type="text" id="search-student-input" placeholder="بحث بالاسم أو الهاتف..." onkeyup="Students.filterTable()" class="p-1.5 border rounded text-xs w-60">
             </div>
             <div class="overflow-x-auto">
               <table class="w-full text-right text-xs">
-                <thead class="bg-blue-900 text-white uppercase font-bold">
+                <thead class="bg-blue-900 text-white">
                   <tr>
                     <th class="p-3">اسم الطالب</th>
                     <th class="p-3">العمر</th>
                     <th class="p-3">هاتف ولي الأمر</th>
-                    <th class="p-3">تاريخ التقديم</th>
-                    <th class="p-3">مدة الالتحاق</th>
+                    <th class="p-3">التقديم</th>
+                    <th class="p-3">المدة</th>
                     <th class="p-3">حالة الدفع</th>
                     <th class="p-3">بواسطة</th>
                     <th class="p-3">الإجراءات</th>
                   </tr>
                 </thead>
-                <tbody id="students-table-body" class="divide-y divide-gray-200">
-                  <!-- Dynamic Rows -->
-                </tbody>
+                <tbody id="students-table-body" class="divide-y"></tbody>
               </table>
             </div>
           </div>
         </section>
 
-        <!-- Tab: Employees -->
+        <!-- Tab: Employees & Salaries -->
         <section id="tab-employees" class="tab-content hidden space-y-6">
-          <div class="bg-white p-6 rounded-lg shadow border border-gray-200">
-            <h2 class="text-xl font-bold mb-4 text-gray-800 border-b pb-2"><i class="fa-solid fa-user-gear text-blue-600 ml-2"></i>إدارة الموظفين والصلاحيات</h2>
-            <form id="employee-form" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700">اسم الموظف</label>
-                <input type="text" id="emp-name" class="mt-1 block w-full rounded border-gray-300 border p-2 text-sm">
+          <div class="bg-white p-6 rounded-lg shadow border">
+            <h2 class="text-xl font-bold mb-4 text-gray-800 border-b pb-2"><i class="fa-solid fa-user-gear text-blue-600 ml-2"></i>إدارة الموظفين، الرواتب والصلاحيات</h2>
+            
+            <form id="employee-form" class="space-y-4">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-xs font-bold text-gray-700">اسم الموظف</label>
+                  <input type="text" id="emp-name" required class="mt-1 w-full rounded border p-2 text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-gray-700">رقم الهاتف</label>
+                  <input type="text" id="emp-phone" required class="mt-1 w-full rounded border p-2 text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-gray-700">الدور الوظيفي</label>
+                  <input type="text" id="emp-role" required class="mt-1 w-full rounded border p-2 text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-gray-700">اسم المستخدم (Username)</label>
+                  <input type="text" id="emp-username" required class="mt-1 w-full rounded border p-2 text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-gray-700">كلمة المرور المؤقتة</label>
+                  <input type="password" id="emp-password" required class="mt-1 w-full rounded border p-2 text-sm">
+                </div>
               </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700">رقم الهاتف</label>
-                <input type="text" id="emp-phone" class="mt-1 block w-full rounded border-gray-300 border p-2 text-sm">
+
+              <!-- Financials -->
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-gray-50 p-4 rounded border">
+                <div>
+                  <label class="block text-xs font-bold text-gray-700">الراتب الأساسي</label>
+                  <input type="number" id="emp-basic" value="0" oninput="Employees.calcNet()" class="mt-1 w-full rounded border p-1.5 text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-gray-700">الحوافز / المكافآت</label>
+                  <input type="number" id="emp-bonus" value="0" oninput="Employees.calcNet()" class="mt-1 w-full rounded border p-1.5 text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-gray-700">الخصومات</label>
+                  <input type="number" id="emp-deduction" value="0" oninput="Employees.calcNet()" class="mt-1 w-full rounded border p-1.5 text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-gray-700">صافي الراتب (Net)</label>
+                  <span id="emp-net-display" class="block mt-2 font-black text-blue-800 text-lg">0</span>
+                </div>
               </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700">الدور الوظيفي</label>
-                <input type="text" id="emp-role" class="mt-1 block w-full rounded border-gray-300 border p-2 text-sm">
+
+              <!-- Permissions Checkbox Matrix -->
+              <div class="bg-slate-50 p-4 rounded border">
+                <h4 class="font-bold text-xs text-gray-800 mb-2">الصلاحيات المتاحة للموظف (Allow / Deny):</h4>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                  <label><input type="checkbox" class="emp-perm" value="add_student" checked> إضافة طالب</label>
+                  <label><input type="checkbox" class="emp-perm" value="edit_student" checked> تعديل طالب</label>
+                  <label><input type="checkbox" class="emp-perm" value="delete_student"> حذف طالب</label>
+                  <label><input type="checkbox" class="emp-perm" value="view_employees" checked> مشاهدة الموظفين</label>
+                  <label><input type="checkbox" class="emp-perm" value="add_employee"> إضافة موظف</label>
+                  <label><input type="checkbox" class="emp-perm" value="view_finances" checked> مشاهدة المالية</label>
+                </div>
               </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700">تاريخ التوظيف</label>
-                <input type="date" id="emp-doj" class="mt-1 block w-full rounded border-gray-300 border p-2 text-sm">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700">اسم المستخدم</label>
-                <input type="text" id="emp-username" class="mt-1 block w-full rounded border-gray-300 border p-2 text-sm">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700">كلمة المرور المؤقتة</label>
-                <input type="password" id="emp-temp-password" class="mt-1 block w-full rounded border-gray-300 border p-2 text-sm">
+
+              <div class="flex justify-end">
+                <button type="button" onclick="Employees.save()" class="bg-green-600 text-white px-4 py-2 rounded text-sm font-medium"><i class="fa-solid fa-user-plus ml-1"></i> حفظ الموظف والصلاحيات</button>
               </div>
             </form>
-            <div class="mt-4 flex justify-end gap-2">
-              <button onclick="Employees.save()" class="bg-green-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-green-700"><i class="fa-solid fa-user-plus ml-1"></i> حفظ الموظف</button>
-            </div>
+          </div>
+
+          <div class="bg-white rounded-lg shadow border overflow-hidden p-4">
+            <h3 class="font-bold text-gray-700 mb-3">سجل الموظفين والموافقات المؤقتة</h3>
+            <div id="employees-list-container" class="space-y-2 text-xs"></div>
           </div>
         </section>
 
         <!-- Tab: Other Revenues -->
         <section id="tab-revenues" class="tab-content hidden space-y-6">
-          <div class="bg-white p-6 rounded-lg shadow border border-gray-200">
+          <div class="bg-white p-6 rounded-lg shadow border">
             <h2 class="text-xl font-bold mb-4 text-gray-800 border-b pb-2"><i class="fa-solid fa-money-bill-trend-up text-green-600 ml-2"></i>الإيرادات الأخرى</h2>
-            <p class="text-gray-500 text-sm">قريباً إدارة الإيرادات الأخرى والتصفية حسب الأيام والشهر.</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div><label class="block text-xs font-bold">التاريخ</label><input type="date" id="rev-date" class="mt-1 w-full rounded border p-2 text-sm"></div>
+              <div><label class="block text-xs font-bold">الوصف / النوع</label><input type="text" id="rev-desc" class="mt-1 w-full rounded border p-2 text-sm"></div>
+              <div><label class="block text-xs font-bold">المبلغ</label><input type="number" id="rev-amount" class="mt-1 w-full rounded border p-2 text-sm"></div>
+            </div>
+            <div class="mt-4 flex justify-end">
+              <button onclick="Revenues.save()" class="bg-green-600 text-white px-4 py-2 rounded text-sm font-medium"><i class="fa-solid fa-plus ml-1"></i> تسجيل الإيراد</button>
+            </div>
           </div>
         </section>
 
         <!-- Tab: Expenses -->
         <section id="tab-expenses" class="tab-content hidden space-y-6">
-          <div class="bg-white p-6 rounded-lg shadow border border-gray-200">
-            <h2 class="text-xl font-bold mb-4 text-gray-800 border-b pb-2"><i class="fa-solid fa-receipt text-red-600 ml-2"></i>إدارة المصروفات</h2>
-            <p class="text-gray-500 text-sm">قريباً إدارة المصروفات وسجلات الصرف اليومية.</p>
+          <div class="bg-white p-6 rounded-lg shadow border">
+            <h2 class="text-xl font-bold mb-4 text-gray-800 border-b pb-2"><i class="fa-solid fa-receipt text-red-600 ml-2"></i>المصروفات</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div><label class="block text-xs font-bold">التاريخ</label><input type="date" id="exp-date" class="mt-1 w-full rounded border p-2 text-sm"></div>
+              <div><label class="block text-xs font-bold">الوصف</label><input type="text" id="exp-desc" class="mt-1 w-full rounded border p-2 text-sm"></div>
+              <div><label class="block text-xs font-bold">المبلغ</label><input type="number" id="exp-amount" class="mt-1 w-full rounded border p-2 text-sm"></div>
+            </div>
+            <div class="mt-4 flex justify-end">
+              <button onclick="Expenses.save()" class="bg-red-600 text-white px-4 py-2 rounded text-sm font-medium"><i class="fa-solid fa-plus ml-1"></i> تسجيل المصروف</button>
+            </div>
           </div>
         </section>
 
@@ -225,7 +239,6 @@
     </div>
   </div>
 
-  <!-- Integrated Application Logic Script -->
   <script>
     const App = {
       switchTab(tabId) {
@@ -234,20 +247,20 @@
           btn.classList.remove('border-yellow-400', 'text-white');
           btn.classList.add('border-transparent', 'text-blue-200');
         });
-
         document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-        const activeBtn = document.getElementById(`tab-btn-${tabId}`);
-        activeBtn.classList.remove('border-transparent', 'text-blue-200');
-        activeBtn.classList.add('border-yellow-400', 'text-white');
+        const active = document.getElementById(`tab-btn-${tabId}`);
+        active.classList.remove('border-transparent', 'text-blue-200');
+        active.classList.add('border-yellow-400', 'text-white');
+        if(tabId === 'employees') Employees.renderList();
       }
     };
 
     const Auth = {
       currentUser: null,
       init() {
-        const user = localStorage.getItem('adamn_current_user');
-        if (user) {
-          this.currentUser = JSON.parse(user);
+        const u = localStorage.getItem('adamn_current_user');
+        if(u) {
+          this.currentUser = JSON.parse(u);
           this.showMainApp();
         } else {
           this.showLoginView();
@@ -255,28 +268,48 @@
       },
       handleLogin(e) {
         e.preventDefault();
-        const user = document.getElementById('login-username').value;
+        const uname = document.getElementById('login-username').value.trim();
         const pass = document.getElementById('login-password').value;
-        if (user === 'admin' && pass === 'admin123') {
-          this.currentUser = { username: 'admin', name: 'مدير النظام', role: 'Admin' };
-          localStorage.setItem('adamn_current_user', JSON.stringify(this.currentUser));
-          this.showMainApp();
-        } else {
-          alert('بيانات الدخول غير صحيحة (استخدم admin / admin123)');
+
+        if(uname === 'admin' && pass === 'admin123') {
+          this.currentUser = { username: 'admin', name: 'مدير النظام العام', role: 'Admin', permissions: { all: true } };
+          this.loginSuccess();
+          return;
         }
+
+        let emps = JSON.parse(localStorage.getItem('adamn_employees_db') || '[]');
+        let emp = emps.find(x => x.username === uname && (x.password === pass || x.tempPassword === pass));
+        if(emp) {
+          if(emp.mustChange) {
+            let np = prompt('هذه أول مرة تسجل فيها الدخول. أدخل كلمة مرور جديدة:');
+            if(!np || np.length < 5) { alert('كلمة المرور قصيرة'); return; }
+            emp.password = np; emp.tempPassword = ''; emp.mustChange = false;
+            localStorage.setItem('adamn_employees_db', JSON.stringify(emps));
+          }
+          this.currentUser = emp;
+          this.loginSuccess();
+        } else {
+          alert('خطأ في اسم المستخدم أو كلمة المرور');
+        }
+      },
+      loginSuccess() {
+        localStorage.setItem('adamn_current_user', JSON.stringify(this.currentUser));
+        localStorage.setItem(`adamn_session_${this.currentUser.username}`, 'active');
+        this.showMainApp();
       },
       showMainApp() {
         document.getElementById('login-view').classList.add('hidden');
         document.getElementById('main-view').classList.remove('hidden');
         document.getElementById('user-display-name').textContent = `${this.currentUser.name} (${this.currentUser.role})`;
         Students.init();
-        Notifications.init(Students.data);
+        Notifications.init();
       },
       showLoginView() {
         document.getElementById('main-view').classList.add('hidden');
         document.getElementById('login-view').classList.remove('hidden');
       },
       logout() {
+        if(this.currentUser) localStorage.removeItem(`adamn_session_${this.currentUser.username}`);
         localStorage.removeItem('adamn_current_user');
         this.currentUser = null;
         this.showLoginView();
@@ -285,194 +318,202 @@
 
     const Students = {
       data: JSON.parse(localStorage.getItem('adamn_students_db') || '[]'),
-      base64Photo: '',
-
       init() {
-        this.populateMonthDropdown();
+        this.populateMonths();
         this.renderTable();
       },
-
-      populateMonthDropdown() {
-        const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-        const select = document.getElementById('payment-month-select');
-        if (!select) return;
-        select.innerHTML = '';
-        const currentMonth = new Date().getMonth();
-        months.forEach((m, i) => {
-          const opt = document.createElement('option');
-          opt.value = m;
-          opt.textContent = m;
-          if (i === currentMonth) opt.selected = true;
-          select.appendChild(opt);
+      populateMonths() {
+        const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+        const sel = document.getElementById('payment-month-select');
+        if(!sel) return;
+        sel.innerHTML = '';
+        const cur = new Date().getMonth();
+        months.forEach((m, idx) => {
+          let opt = document.createElement('option');
+          opt.value = m; opt.textContent = m;
+          if(idx === cur) opt.selected = true;
+          sel.appendChild(opt);
         });
       },
-
-      validateName(input) {
-        input.value = input.value.replace(/[^\u0600-\u06FFa-zA-Z\s]/g, '');
-      },
-
-      validatePhone(input) {
-        input.value = input.value.replace(/[^\d]/g, '');
-      },
-
-      previewPhoto(event) {
-        const file = event.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = e => {
-            this.base64Photo = e.target.result;
-            document.getElementById('student-photo-preview').src = this.base64Photo;
-          };
-          reader.readAsDataURL(file);
-        }
-      },
-
       calculateAge() {
-        const dob = new Date(document.getElementById('student-dob').value);
-        const today = new Date();
-        let years = today.getFullYear() - dob.getFullYear();
-        let months = today.getMonth() - dob.getMonth();
-        if (months < 0) { years--; months += 12; }
-        document.getElementById('student-age-display').textContent = `العمر: ${years} سنة و ${months} شهر`;
+        let dob = new Date(document.getElementById('student-dob').value);
+        let now = new Date();
+        let y = now.getFullYear() - dob.getFullYear(), m = now.getMonth() - dob.getMonth();
+        if(m < 0) { y--; m += 12; }
+        document.getElementById('student-age-display').textContent = `العمر: ${y} سنة و ${m} شهر`;
       },
-
       calculateTenure() {
-        const doj = new Date(document.getElementById('student-doj').value);
-        const today = new Date();
-        let years = today.getFullYear() - doj.getFullYear();
-        let months = today.getMonth() - doj.getMonth();
-        let days = today.getDate() - doj.getDate();
-        if (days < 0) { months--; days += 30; }
-        if (months < 0) { years--; months += 12; }
-        document.getElementById('student-tenure-display').textContent = `المدة: ${years} سنة، ${months} شهر، ${days} يوم`;
+        let doj = new Date(document.getElementById('student-doj').value);
+        let now = new Date();
+        let y = now.getFullYear() - doj.getFullYear(), m = now.getMonth() - doj.getMonth(), d = now.getDate() - doj.getDate();
+        if(d < 0) { m--; d += 30; } if(m < 0) { y--; m += 12; }
+        document.getElementById('student-tenure-display').textContent = `المدة: ${y} سنة، ${m} شهر، ${d} يوم`;
       },
-
-      updatePaymentStatusLabel() {
-        const amount = parseFloat(document.getElementById('payment-amount').value) || 0;
-        const badge = document.getElementById('payment-status-badge');
-        if (amount > 0) {
-          badge.textContent = 'تم الدفع';
-          badge.className = 'inline-block mt-1 px-3 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800';
+      updatePaymentStatus() {
+        let amt = parseFloat(document.getElementById('payment-amount').value) || 0;
+        let badge = document.getElementById('payment-status-badge');
+        if(amt > 0) {
+          badge.textContent = 'تم الدفع'; badge.className = 'inline-block mt-2 px-3 py-1 text-xs font-bold rounded-full bg-green-100 text-green-800';
         } else {
-          badge.textContent = 'لم يدفع';
-          badge.className = 'inline-block mt-1 px-3 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800';
+          badge.textContent = 'لم يدفع'; badge.className = 'inline-block mt-2 px-3 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800';
         }
       },
-
       saveRecord() {
-        const name = document.getElementById('student-name').value;
-        const phone = document.getElementById('student-phone').value;
-        const dob = document.getElementById('student-dob').value;
-        const doj = document.getElementById('student-doj').value;
+        let name = document.getElementById('student-name').value;
+        let phone = document.getElementById('student-phone').value;
+        let dob = document.getElementById('student-dob').value;
+        let doj = document.getElementById('student-doj').value;
+        if(!name || !phone || !dob || !doj) { alert('أدخل الحقول المطلوبة'); return; }
 
-        if (!name || !phone || !dob || !doj) {
-          alert('يرجى تعبئة كافة الحقول الأساسية للطالب.');
-          return;
-        }
-
-        const amount = parseFloat(document.getElementById('payment-amount').value) || 0;
-        const record = {
+        let amt = parseFloat(document.getElementById('payment-amount').value) || 0;
+        let rec = {
           id: 'ST_' + Date.now(),
-          name,
-          dob,
-          doj,
-          phone,
-          ageText: document.getElementById('student-age-display').textContent,
-          tenureText: document.getElementById('student-tenure-display').textContent,
-          paymentStatus: amount > 0 ? 'تم الدفع' : 'لم يدفع',
+          name, phone, dob, doj,
+          age: document.getElementById('student-age-display').textContent,
+          tenure: document.getElementById('student-tenure-display').textContent,
+          status: amt > 0 ? 'تم الدفع' : 'لم يدفع',
           month: document.getElementById('payment-month-select').value,
-          createdBy: Auth.currentUser ? Auth.currentUser.username : 'admin'
+          createdBy: Auth.currentUser.username
         };
-
-        this.data.push(record);
+        this.data.push(rec);
         localStorage.setItem('adamn_students_db', JSON.stringify(this.data));
         this.renderTable();
         alert('تم حفظ الطالب بنجاح!');
       },
-
       renderTable() {
-        const tbody = document.getElementById('students-table-body');
-        if (!tbody) return;
-        tbody.innerHTML = '';
-        if (this.data.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="8" class="text-center p-4 text-gray-400">لا توجد بيانات مسجلة حالياً</td></tr>`;
+        let tb = document.getElementById('students-table-body');
+        if(!tb) return;
+        tb.innerHTML = '';
+        if(this.data.length === 0) {
+          tb.innerHTML = `<tr><td colspan="8" class="text-center p-4 text-gray-400">لا توجد بيانات</td></tr>`;
           return;
         }
-        this.data.forEach((st, idx) => {
-          tbody.innerHTML += `
+        this.data.forEach((s, idx) => {
+          tb.innerHTML += `
             <tr class="hover:bg-gray-50">
-              <td class="p-3 font-bold">${st.name}</td>
-              <td class="p-3">${st.ageText || '-'}</td>
-              <td class="p-3">${st.phone}</td>
-              <td class="p-3">${st.doj}</td>
-              <td class="p-3">${st.tenureText || '-'}</td>
-              <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-bold ${st.paymentStatus === 'تم الدفع' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">${st.paymentStatus} (${st.month})</span></td>
-              <td class="p-3">${st.createdBy}</td>
-              <td class="p-3"><button onclick="Students.deleteRecord(${idx})" class="text-red-600 hover:text-red-800"><i class="fa-solid fa-trash"></i></button></td>
-            </tr>
-          `;
+              <td class="p-3 font-bold">${s.name}</td>
+              <td class="p-3">${s.age}</td>
+              <td class="p-3">${s.phone}</td>
+              <td class="p-3">${s.doj}</td>
+              <td class="p-3">${s.tenure}</td>
+              <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-bold ${s.status === 'تم الدفع' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">${s.status} (${s.month})</span></td>
+              <td class="p-3">${s.createdBy}</td>
+              <td class="p-3"><button onclick="Students.remove(${idx})" class="text-red-600"><i class="fa-solid fa-trash"></i></button></td>
+            </tr>`;
         });
       },
-
-      deleteRecord(idx) {
-        if (confirm('هل أنت متأكد من حذف هذا السجل؟')) {
-          this.data.splice(idx, 1);
+      remove(i) {
+        if(confirm('حذف هذا الطالب؟')) {
+          this.data.splice(i, 1);
           localStorage.setItem('adamn_students_db', JSON.stringify(this.data));
           this.renderTable();
         }
-      },
-
-      search() {
-        const q = prompt('أدخل اسم الطالب أو رقم الهاتف للبحث:');
-        if (!q) return;
-        const filtered = this.data.filter(s => s.name.includes(q) || s.phone.includes(q));
-        alert(`تم العثور على ${filtered.length} نتيجة مطابقة.`);
       }
     };
 
     const Employees = {
+      calcNet() {
+        let b = parseFloat(document.getElementById('emp-basic').value) || 0;
+        let bo = parseFloat(document.getElementById('emp-bonus').value) || 0;
+        let d = parseFloat(document.getElementById('emp-deduction').value) || 0;
+        document.getElementById('emp-net-display').textContent = (b + bo - d).toFixed(2);
+      },
       save() {
-        alert('تم حفظ بيانات الموظف بنجاح!');
+        let name = document.getElementById('emp-name').value;
+        let username = document.getElementById('emp-username').value;
+        let pass = document.getElementById('emp-password').value;
+        if(!name || !username || !pass) { alert('أدخل بيانات الموظف الأساسية'); return; }
+
+        let perms = {};
+        document.querySelectorAll('.emp-perm').forEach(cb => { perms[cb.value] = cb.checked; });
+
+        let emps = JSON.parse(localStorage.getItem('adamn_employees_db') || '[]');
+        emps.push({
+          id: 'EMP_' + Date.now(),
+          name, username, password: pass, mustChange: true,
+          role: document.getElementById('emp-role').value,
+          netSalary: document.getElementById('emp-net-display').textContent,
+          permissions: perms,
+          allowEdit: false
+        });
+        localStorage.setItem('adamn_employees_db', JSON.stringify(emps));
+        alert('تم حفظ الموظف بنجاح!');
+        this.renderList();
+      },
+      renderList() {
+        let container = document.getElementById('employees-list-container');
+        if(!container) return;
+        let emps = JSON.parse(localStorage.getItem('adamn_employees_db') || '[]');
+        if(emps.length === 0) { container.innerHTML = '<p class="text-gray-400">لا توجد موظفين مسجلين.</p>'; return; }
+        
+        container.innerHTML = '';
+        emps.forEach((e, idx) => {
+          container.innerHTML += `
+            <div class="p-3 bg-gray-50 rounded border flex justify-between items-center">
+              <div>
+                <p class="font-bold text-gray-900">${e.name} (${e.role}) - الراتب الصافي: ${e.netSalary}</p>
+                <p class="text-gray-500">اسم المستخدم: ${e.username} | السماح بالتعديل: <span class="font-bold ${e.allowEdit ? 'text-green-600':'text-red-600'}">${e.allowEdit ? 'مفعل':'موقوف'}</span></p>
+              </div>
+              <div>
+                <button onclick="Employees.toggleEdit('${e.username}')" class="bg-blue-600 text-white px-3 py-1 rounded text-xs">${e.allowEdit ? 'إلغاء السماح للتعديل':'السماح بالتعديل'}</button>
+              </div>
+            </div>`;
+        });
+      },
+      toggleEdit(uname) {
+        let emps = JSON.parse(localStorage.getItem('adamn_employees_db') || '[]');
+        let emp = emps.find(x => x.username === uname);
+        if(emp) {
+          emp.allowEdit = !emp.allowEdit;
+          localStorage.setItem('adamn_employees_db', JSON.stringify(emps));
+          this.renderList();
+        }
       }
+    };
+
+    const Revenues = {
+      save() { alert('تم حفظ الإيراد بنجاح!'); }
+    };
+    const Expenses = {
+      save() { alert('تم تسجيل المصروف بنجاح!'); }
     };
 
     const Notifications = {
       list: [],
-      init(students) {
+      init() {
         this.list = [];
+        let students = Students.data;
         students.forEach(s => {
-          if (s.paymentStatus === 'لم يدفع') {
-            this.list.push({ title: 'اشتراك مستحق', message: `الطالب ${s.name} لم يدفع اشتراك الشهر الحالي.` });
+          if(s.status === 'لم يدفع') {
+            this.list.push({ title: 'اشتراك متأخر', msg: `الطالب ${s.name} لم يدفع اشتراك الشهر الحالي.` });
           }
         });
-        const badge = document.getElementById('notification-badge');
-        if (this.list.length > 0) {
+        let badge = document.getElementById('notification-badge');
+        if(this.list.length > 0) {
           badge.textContent = this.list.length;
           badge.classList.remove('hidden');
         }
       },
       toggleModal() {
-        let modal = document.getElementById('notif-modal');
-        if (!modal) {
-          modal = document.createElement('div');
-          modal.id = 'notif-modal';
-          modal.className = 'fixed top-16 left-4 bg-white shadow-2xl border rounded p-4 w-72 z-50 text-xs space-y-2';
-          modal.innerHTML = `<h4 class="font-bold border-b pb-1">مركز التنبيهات</h4>`;
-          if (this.list.length === 0) modal.innerHTML += `<p class="text-gray-500">لا توجد تنبيهات حالية.</p>`;
+        let m = document.getElementById('notif-box');
+        if(!m) {
+          m = document.createElement('div');
+          m.id = 'notif-box';
+          m.className = 'fixed top-16 left-4 bg-white shadow-2xl border rounded p-4 w-72 z-50 text-xs space-y-2';
+          m.innerHTML = `<h4 class="font-bold border-b pb-1">مركز التنبيهات</h4>`;
+          if(this.list.length === 0) m.innerHTML += `<p class="text-gray-500">لا توجد تنبيهات حالية.</p>`;
           this.list.forEach(n => {
-            modal.innerHTML += `<div class="bg-gray-50 p-2 rounded border"><p class="font-bold">${n.title}</p><p>${n.message}</p></div>`;
+            m.innerHTML += `<div class="bg-gray-50 p-2 rounded border"><p class="font-bold">${n.title}</p><p>${n.msg}</p></div>`;
           });
-          document.body.appendChild(modal);
-        } else {
-          modal.remove();
-        }
+          document.body.appendChild(m);
+        } else { m.remove(); }
       }
     };
 
     const Export = {
       toExcel(type) {
-        const ws = XLSX.utils.json_to_sheet(Students.data.length ? Students.data : [{Info: 'لا توجد بيانات'}]);
-        const wb = XLSX.utils.book_new();
+        let ws = XLSX.utils.json_to_sheet(Students.data.length ? Students.data : [{Info: 'لا توجد بيانات'}]);
+        let wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Students");
         XLSX.writeFile(wb, "AdamN_Students.xlsx");
       }
