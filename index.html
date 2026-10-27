@@ -1,0 +1,56 @@
+import { useState, useMemo, useEffect } from "react";
+import { AppProvider, useApp } from "@/lib/store";
+import { LoginPage } from "@/components/LoginPage";
+import { StudentsPage } from "@/components/StudentsPage";
+import { StaffPage } from "@/components/StaffPage";
+import { RevenuePage } from "@/components/RevenuePage";
+import { ExpensesPage } from "@/components/ExpensesPage";
+import { TopBar } from "@/components/TopBar";
+import { NotificationCenter } from "@/components/NotificationCenter";
+import { Toaster } from "@/components/ui/sonner";
+
+type Tab = "students" | "staff" | "revenue" | "expenses";
+
+function Shell() {
+  const { currentUser, can } = useApp();
+  const [tab, setTab] = useState<Tab>("students");
+
+  const tabs = useMemo(
+    () =>
+      [
+        { id: "students" as Tab, label: "الطلاب", perm: "view_students" },
+        { id: "staff" as Tab, label: "الموظفون", perm: "view_staff" },
+        { id: "revenue" as Tab, label: "إيرادات أخرى", perm: "view_finance" },
+        { id: "expenses" as Tab, label: "المصروفات", perm: "view_expenses" },
+      ].filter((t) => can(t.perm)),
+    [can]
+  );
+
+  useEffect(() => {
+    if (tabs.length && !tabs.find((t) => t.id === tab)) setTab(tabs[0].id);
+  }, [tabs, tab]);
+
+  if (!currentUser) return <LoginPage />;
+
+  return (
+    <div className="min-h-screen bg-slate-100 text-slate-900">
+      <TopBar tabs={tabs} active={tab} onChange={setTab} />
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        {tab === "students" && <StudentsPage />}
+        {tab === "staff" && <StaffPage />}
+        {tab === "revenue" && <RevenuePage />}
+        {tab === "expenses" && <ExpensesPage />}
+      </main>
+      <NotificationCenter />
+      <Toaster position="top-center" richColors />
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AppProvider>
+      <Shell />
+    </AppProvider>
+  );
+}
