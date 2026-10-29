@@ -14,7 +14,8 @@
     "reset": "node --no-warnings scripts/reset.js",
     "doctor": "node --no-warnings scripts/doctor.js",
     "test": "node --no-warnings --test tests/*.test.js",
-    "test:time": "node --no-warnings --test tests/time.test.js"
+    "test:time": "node --no-warnings --test tests/time.test.js",
+    "reset-password": "node --no-warnings scripts/reset-password.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
