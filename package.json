@@ -1,0 +1,26 @@
+{
+  "name": "adamn-nms",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AdamN NMS - Nursery Management System (local-first, HDANA data file)",
+  "main": "server/index.js",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node --no-warnings server/index.js",
+    "dev": "node --no-warnings --watch server/index.js",
+    "seed": "node --no-warnings scripts/seed.js",
+    "reset": "node --no-warnings scripts/reset.js",
+    "doctor": "node --no-warnings scripts/doctor.js",
+    "test": "node --no-warnings --test tests/*.test.js",
+    "test:time": "node --no-warnings --test tests/time.test.js",
+    "reset-password": "node --no-warnings scripts/reset-password.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "exceljs": "^4.4.0",
+    "express": "^4.21.2"
+  }
+}

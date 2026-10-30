@@ -1,0 +1,24 @@
+# dependencies
+node_modules/
+
+# local data — never commit a nursery's real data file
+storage/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.hdana
+
+# secrets / local config
+.env
+.env.local
+
+# logs, OS and editor noise
+*.log
+storage/logs/
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+coverage/
